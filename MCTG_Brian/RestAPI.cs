@@ -36,12 +36,12 @@ namespace MCTG_Brian
                 TcpClient client = listener.AcceptTcpClient();
 
                 // Start a new thread to handle the request
-                Thread thread = new Thread(() => ThreatRequest(client));
+                Thread thread = new Thread(() => ThreadRequest(client));
                 thread.Start();
             }
         
         }
-        public void ThreatRequest(TcpClient client)
+        public void ThreadRequest(TcpClient client)
         {
             // Receive message
             NetworkStream stream = client.GetStream();

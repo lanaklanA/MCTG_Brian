@@ -22,3 +22,4 @@ C:\Users\schne\Documents\GitHome\FHTW\season3\SWEN\first\MCTG_Brian\MCTG_Brian\b
 C:\Users\schne\Documents\GitHome\FHTW\season3\SWEN\first\MCTG_Brian\MCTG_Brian\bin\Debug\net6.0\Microsoft.Extensions.Primitives.dll
 C:\Users\schne\Documents\GitHome\FHTW\season3\SWEN\first\MCTG_Brian\MCTG_Brian\obj\Debug\net6.0\MCTG_Brian.csproj.CopyComplete
 C:\Users\schne\Documents\GitHome\FHTW\season3\SWEN\first\MCTG_Brian\MCTG_Brian\bin\Debug\net6.0\Newtonsoft.Json.dll
+C:\Users\schne\Documents\GitHome\FHTW\season3\SWEN\first\MCTG_Brian\MCTG_Brian\bin\Debug\net6.0\Npgsql.dll

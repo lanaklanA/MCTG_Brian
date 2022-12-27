@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="7.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+    <PackageReference Include="Npgsql" Version="7.0.1" />
     <PackageReference Include="runtime.unix.System.Diagnostics.Debug" Version="4.3.0" />
     <PackageReference Include="runtime.win.System.Diagnostics.Debug" Version="4.3.0" />
     <PackageReference Include="System.Diagnostics.Debug" Version="4.3.0" />

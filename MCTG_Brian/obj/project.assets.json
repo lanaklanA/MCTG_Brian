@@ -166,6 +166,23 @@
           }
         }
       },
+      "Npgsql/7.0.1": {
+        "type": "package",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "6.0.0",
+          "System.Runtime.CompilerServices.Unsafe": "6.0.0"
+        },
+        "compile": {
+          "lib/net6.0/Npgsql.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net6.0/Npgsql.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "runtime.native.System/4.3.0": {
         "type": "package",
         "dependencies": {
@@ -550,6 +567,31 @@
         "packageIcon.png"
       ]
     },
+    "Npgsql/7.0.1": {
+      "sha512": "+s2gUPA37wDy9B3mE7ZN8xhfnSrf56OCR8ELMZkEbNxk9MyWS54o7ttrngmu7s7/C2ldjAWMdggkpMMPCZsKSg==",
+      "type": "package",
+      "path": "npgsql/7.0.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "lib/net5.0/Npgsql.dll",
+        "lib/net5.0/Npgsql.xml",
+        "lib/net6.0/Npgsql.dll",
+        "lib/net6.0/Npgsql.xml",
+        "lib/net7.0/Npgsql.dll",
+        "lib/net7.0/Npgsql.xml",
+        "lib/netcoreapp3.1/Npgsql.dll",
+        "lib/netcoreapp3.1/Npgsql.xml",
+        "lib/netstandard2.0/Npgsql.dll",
+        "lib/netstandard2.0/Npgsql.xml",
+        "lib/netstandard2.1/Npgsql.dll",
+        "lib/netstandard2.1/Npgsql.xml",
+        "npgsql.7.0.1.nupkg.sha512",
+        "npgsql.nuspec",
+        "postgresql.png"
+      ]
+    },
     "runtime.native.System/4.3.0": {
       "sha512": "c/qWt2LieNZIj1jGnVNsE2Kl23Ya2aSTBuXMD6V7k9KWr6l16Tqdwq+hJScEpWER9753NWC8h96PaVNY5Ld7Jw==",
       "type": "package",
@@ -790,6 +832,7 @@
     "net6.0": [
       "Microsoft.Extensions.Logging.Debug >= 7.0.0",
       "Newtonsoft.Json >= 13.0.2",
+      "Npgsql >= 7.0.1",
       "System.Diagnostics.Debug >= 4.3.0",
       "runtime.unix.System.Diagnostics.Debug >= 4.3.0",
       "runtime.win.System.Diagnostics.Debug >= 4.3.0"
@@ -846,6 +889,10 @@
           "Newtonsoft.Json": {
             "target": "Package",
             "version": "[13.0.2, )"
+          },
+          "Npgsql": {
+            "target": "Package",
+            "version": "[7.0.1, )"
           },
           "System.Diagnostics.Debug": {
             "target": "Package",

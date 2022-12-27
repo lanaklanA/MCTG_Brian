@@ -57,15 +57,15 @@ namespace MCTG_Brian
             switch(Path)
             {
                 case "/users":
-                    return "im am in users";
+                    return "i'm in users";
                 case "/packages":
-                    return "im am in packages";
+                    return "i'm in packages";
                 case "/cards":
-                    return "im am in cards";
+                    return "i'm in cards";
                 case "/game":
-                    return "im am in game";
+                    return "i'm in game";
                 case "/trading":
-                    return "im am in trading";
+                    return "i'm in trading";
                 default:
                     return "Hi there, this is the content of my Body!";
             }
