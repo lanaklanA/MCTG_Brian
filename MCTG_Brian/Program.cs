@@ -15,7 +15,7 @@ public class Program
     // Main entry point for the program
     public static void Main(string[] args)
     {
-        RestAPI server = new RestAPI(10001);
+        RestAPI server = new RestAPI("127.0.0.1", 10001);
 
         InitDb();
 

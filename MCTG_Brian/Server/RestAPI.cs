@@ -12,19 +12,19 @@ namespace MCTG_Brian.Server
     public class RestAPI
     {
         private readonly int port;
+        private readonly IPAddress ipAddress;
         private TcpListener listener;
         RequestHandler rq;
 
-        public RestAPI(int PORT)
+        public RestAPI(string IPADDRESS, int PORT)
         {
             port = PORT;
+            ipAddress = IPAddress.Parse(IPADDRESS);
             rq = new RequestHandler();
         }
 
         public void Start()
         {
-            IPAddress ipAddress = IPAddress.Parse("127.0.0.1");
-
             listener = new TcpListener(ipAddress, port);
             listener.Start();
 
