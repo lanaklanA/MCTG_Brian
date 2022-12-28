@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 using System.Text.Json.Nodes;
 using System.IO;
 
-namespace MCTG_Brian
+namespace MCTG_Brian.Server
 {
     public class RestAPI
     {
@@ -39,7 +39,7 @@ namespace MCTG_Brian
                 Thread thread = new Thread(() => ThreadRequest(client));
                 thread.Start();
             }
-        
+
         }
         public void ThreadRequest(TcpClient client)
         {
@@ -58,7 +58,7 @@ namespace MCTG_Brian
 
             client.Close();
         }
-        
+
         public void SendMessage(NetworkStream stream, string body)
         {
             int statusCode = 200;

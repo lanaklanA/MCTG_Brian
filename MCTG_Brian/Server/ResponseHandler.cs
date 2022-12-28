@@ -1,4 +1,4 @@
-﻿namespace MCTG_Brian
+﻿namespace MCTG_Brian.Server
 {
     class ResponseHandler
     {

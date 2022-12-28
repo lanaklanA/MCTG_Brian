@@ -25,14 +25,19 @@ namespace MCTG_Brian.User
             _userRepository.Update(user);
         }
 
-        public void DeleteUser(int id)
+        public void DeleteUser(Guid id)
         {
             _userRepository.Delete(id);
         }
 
-        public User GetUserById(int id)
+        public User GetUserById(Guid id)
         {
             return _userRepository.GetById(id);
+        }
+        
+        public IEnumerable<User> GetAllUsers()
+        {
+            return _userRepository.GetAll();
         }
     }
 }

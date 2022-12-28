@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 
-namespace MCTG_Brian
+namespace MCTG_Brian.Server
 {
     class RequestHandler
     {
@@ -26,7 +26,7 @@ namespace MCTG_Brian
             Path = path;
             Protocol = protocol;
             Headers = new Dictionary<string, string>();
-        
+
             // Parse die Header-Zeilen
             for (int i = 1; i < lines.Length; i++)
             {
@@ -49,12 +49,12 @@ namespace MCTG_Brian
 
                 // Füge den Header dem Request-Objekt hinzu
                 Headers.Add(key, value);
-            }         
+            }
         }
-        
+
         public string HandleRequest()
         {
-            switch(Path)
+            switch (Path)
             {
                 case "/users":
                     return "i'm in users";
@@ -87,7 +87,7 @@ namespace MCTG_Brian
                 jsonArray.Add(JObject.Parse(jsonString));
             }
             else if (json.Type == JTokenType.Array)
-            {     
+            {
                 // JSON string is an array, so parse it directly into the JArray
                 jsonArray = JArray.Parse(jsonString);
             }
