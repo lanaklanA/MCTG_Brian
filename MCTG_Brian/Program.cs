@@ -52,7 +52,7 @@ public class Program
 
 
         // should delete catched user
-        Guid uid = allUsers.ElementAt(2).Id;
+        Guid uid = allUsers.ElementAt(1).Id;
         userService.DeleteUser(uid);
         Console.WriteLine($"Folgende User mit der Guid: {uid} wird gelöscht");
         Console.WriteLine("\n\n");
@@ -71,7 +71,8 @@ public class Program
 
 
         // should fetch user by id
-        var user2 = userService.GetUserById(Guid.Parse("9b9501c0-74c8-4bf7-937b-53f0a4950149"));
+        Guid uid1 = allUsers.ElementAt(0).Id;
+        var user2 = userService.GetUserById(uid1);
         Console.WriteLine($"Fetched Username with id {user2.Id} has the name {user2.Name} and password {user2.Password}\n");
         Console.WriteLine("\n\n");
 

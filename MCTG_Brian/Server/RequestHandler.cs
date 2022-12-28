@@ -57,17 +57,17 @@ namespace MCTG_Brian.Server
             switch (Path)
             {
                 case "/users":
-                    return "i'm in users";
+                    return "\nBody contains: i'm in users\n";
                 case "/packages":
-                    return "i'm in packages";
+                    return "\nBody contains: i'm in packages\n";
                 case "/cards":
-                    return "i'm in cards";
+                    return "\nBody contains: i'm in cards\n";
                 case "/game":
-                    return "i'm in game";
+                    return "\nBody contains: i'm in game\n";
                 case "/trading":
-                    return "i'm in trading";
+                    return "\nBody contains: i'm in trading\n";
                 default:
-                    return "Hi there, this is the content of my Body!";
+                    return "\nBody contains: Hi there, this is the content of my Body!\n";
             }
 
         }
