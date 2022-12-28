@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\schne\\Documents\\GitHome\\FHTW\\season3\\SWEN\\first\\MCTG_Brian\\MCTG_Brian\\MCTG_Brian.csproj": {}
+    "C:\\Users\\schne\\Documents\\GitHome\\MCTG_Brian\\MCTG_Brian\\MCTG_Brian.csproj": {}
   },
   "projects": {
-    "C:\\Users\\schne\\Documents\\GitHome\\FHTW\\season3\\SWEN\\first\\MCTG_Brian\\MCTG_Brian\\MCTG_Brian.csproj": {
+    "C:\\Users\\schne\\Documents\\GitHome\\MCTG_Brian\\MCTG_Brian\\MCTG_Brian.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\schne\\Documents\\GitHome\\FHTW\\season3\\SWEN\\first\\MCTG_Brian\\MCTG_Brian\\MCTG_Brian.csproj",
+        "projectUniqueName": "C:\\Users\\schne\\Documents\\GitHome\\MCTG_Brian\\MCTG_Brian\\MCTG_Brian.csproj",
         "projectName": "MCTG_Brian",
-        "projectPath": "C:\\Users\\schne\\Documents\\GitHome\\FHTW\\season3\\SWEN\\first\\MCTG_Brian\\MCTG_Brian\\MCTG_Brian.csproj",
+        "projectPath": "C:\\Users\\schne\\Documents\\GitHome\\MCTG_Brian\\MCTG_Brian\\MCTG_Brian.csproj",
         "packagesPath": "C:\\Users\\schne\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\schne\\Documents\\GitHome\\FHTW\\season3\\SWEN\\first\\MCTG_Brian\\MCTG_Brian\\obj\\",
+        "outputPath": "C:\\Users\\schne\\Documents\\GitHome\\MCTG_Brian\\MCTG_Brian\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

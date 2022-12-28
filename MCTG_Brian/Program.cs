@@ -7,6 +7,8 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
 using Npgsql;
+using MCTG_Brian.User;
+
 public class Program
 {
 
@@ -15,56 +17,25 @@ public class Program
     {
         RestAPI server = new RestAPI(10001);
 
+        InitDb();
 
-       
-        bool DebugMode = true;  // Just for Debbug reason -> make it to false, if Database is not installed in on your PC
-        if (DebugMode) InitDb();
-        
         server.Start();
         server.Stop();
-
-        
-
     }
 
     public static void InitDb()
     {
-        string connString = "Host=localhost;Username=postgres;Password=qwerqwer;Database=postgres";
+        string connString = "Host=localhost;Username=postgres;Password=qwerqwer;Database=postgres"
+        var userRepository = new UserRepository(connString);
+        var userService = new UserService(userRepository);
 
-        // Connect to the database
-        using (var conn = new NpgsqlConnection(connString))
+        var user = new User
         {
-            try
-            {
-                conn.Open();
-            }
-            catch (Exception) 
-            { 
-                Console.WriteLine("Database connection refused");
-                System.Environment.Exit(-1);
-                //throw;
-            }
-
-            // Create a SELECT * query
-            string query = "SELECT * FROM TEST_TABLE";
-
-            // Execute the query and retrieve the data
-            using (var cmd = new NpgsqlCommand(query, conn))
-            {
-                using (var reader = cmd.ExecuteReader())
-                {
-                    // Print the data to the console
-                    while (reader.Read())
-                    {
-                        for (int i = 0; i < reader.FieldCount; i++)
-                        {
-                            Console.Write(reader[i] + " ");
-                        }
-                        Console.WriteLine();
-                    }
-                }
-            }
-        }
+            Name = "John",
+            Password = "password1234",
+            Email = "john@example.com"
+        };
+        userService.AddUser(user);
     }
 }
 

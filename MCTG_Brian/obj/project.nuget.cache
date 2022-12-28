@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "+1mUl/98F8A8J/7LdU5BImoWRUa/iXeeB2ovz18+kIT7E4a4MMSo32vWrnXOSx6OECBEwE3cCJQ6dQNnM6y0Ow==",
+  "dgSpecHash": "5dVXCkgiLWdKAxkyhKyys3Zx/XrLV5LbvQ39dg/i9LwucAPtwfdf6x7RP2p89F0JmJ1y/NrPbn5SSb5+ghmHxg==",
   "success": true,
-  "projectFilePath": "C:\\Users\\schne\\Documents\\GitHome\\FHTW\\season3\\SWEN\\first\\MCTG_Brian\\MCTG_Brian\\MCTG_Brian.csproj",
+  "projectFilePath": "C:\\Users\\schne\\Documents\\GitHome\\MCTG_Brian\\MCTG_Brian\\MCTG_Brian.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\schne\\.nuget\\packages\\microsoft.extensions.dependencyinjection\\7.0.0\\microsoft.extensions.dependencyinjection.7.0.0.nupkg.sha512",
     "C:\\Users\\schne\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\7.0.0\\microsoft.extensions.dependencyinjection.abstractions.7.0.0.nupkg.sha512",
