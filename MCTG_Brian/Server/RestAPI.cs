@@ -81,7 +81,7 @@ namespace MCTG_Brian.Server
             listener.Stop();
         }
 
-        public void printRequest()
+        public void printRequest()  // just there for debug reason
         {
             Console.WriteLine("Request wird gehandelt: \n");
             Console.WriteLine("Protocol is: \t" + rq.Protocol);
