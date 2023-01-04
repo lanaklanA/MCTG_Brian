@@ -1,112 +1,93 @@
-﻿using System;
-using System.Net;
+﻿using MCTG_Brian.Database;
+using MCTG_Brian.User;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.Contracts;
+using System.Linq;
 using System.Net.Sockets;
 using System.Text;
-using System.Diagnostics;
-using Newtonsoft.Json.Linq;
-using System.Text.Json.Nodes;
-using System.IO;
+using System.Threading.Tasks;
 
 namespace MCTG_Brian.Server
 {
-    public class RestAPI
+    public static class RestAPI
     {
-        private readonly int port;
-        private readonly IPAddress ipAddress;
-        private TcpListener listener;
-        RequestHandler rq;
+        private static string connString = "Host=localhost;Username=postgres;Password=qwerqwer;Database=postgres";
+        private static readonly UserRepository userRepo = new UserRepository(new Database.Database(connString));
 
-        public RestAPI(string IPADDRESS, int PORT)
+        public static void Controller(RequestContainer request, NetworkStream stream)
         {
-            port = PORT;
-            ipAddress = IPAddress.Parse(IPADDRESS);
-            rq = new RequestHandler();
-        }
 
-        public void Start()
-        {
-            listener = new TcpListener(ipAddress, port);
-            listener.Start();
-
-            Console.WriteLine($"Server wartet am port {port} ...");
-
-            while (true)
+            switch (request.Method) 
             {
-                // Accept incoming connection
-                TcpClient client = listener.AcceptTcpClient();
+                case "GET":
 
-                // Start a new thread to handle the request
-                Thread thread = new Thread(() => ThreadRequest(client));
-                thread.Start();
+                    var user1 = userRepo.GetUserById(Guid.Parse("4e38b8ab-53cb-40d5-aa3b-6524f5bb715d"));
+                    Console.WriteLine("[GET] User bekommen: " + user1.Name);
+                    SendMessage(stream, "[GET] User bekommen");
+                    
+
+                break;
+
+
+                    
+                case "POST":
+                    
+                    var user = new User.User
+                    { 
+                        Name = "MalWasNeues",
+                        Password = "MalWasNeues",
+                    };
+
+                    userRepo.AddUser(user);
+                    Console.WriteLine("[POST] User hinzugefügt");
+                    SendMessage(stream, "[POST] User hinzugefügt");
+                    
+                    break;
+
+
+             
+                case "DELETE":
+                    
+                    userRepo.DeleteUser(Guid.Parse("b6fc004e-e029-47c6-aed6-bd770473c193"));
+                    Console.WriteLine("[DELETE] User wurde geloescht");
+                    SendMessage(stream, "[DELETE] User wurde geloescht");
+
+                    
+                    break;
+
+
+                case "PUT":
+
+                    var updatedUser = new User.User
+                    {
+                        Id = Guid.Parse("44cac76a-cf5d-4c2c-b68b-8635d505d233"),
+                        Name = "NeuerName",
+                        Password = "NeuesPassword",
+                    };
+
+
+                    userRepo.UpdateUser(updatedUser);
+                    Console.WriteLine("[PUT] User wurde geupdated");
+                    SendMessage(stream, "[PUT] User wurde geupdated");
+                    
+
+                    break;
             }
 
-        }
-        public void ThreadRequest(TcpClient client)
-        {
-            // Receive message
-            NetworkStream stream = client.GetStream();
-            string HttpRequest = ReceiveMessage(stream);
 
-            // Handle message
-            rq.ParseRequest(HttpRequest);
-            printRequest();     // just there for debugging reason!
-
-            string HttpResponse = rq.HandleRequest();
-
-            // Send response
-            SendMessage(stream, HttpResponse);
-
-            client.Close();
         }
 
-        public void SendMessage(NetworkStream stream, string body)
+        public static void SendMessage(NetworkStream stream, string body)
         {
             int statusCode = 200;
-            ResponseHandler rh = new ResponseHandler(statusCode, "application/json", body);
+            ResponseContainer response = new ResponseContainer(statusCode, "application/json", body);
 
-            string response = rh.HttpResponseToString();
-            byte[] responseBuffer = Encoding.ASCII.GetBytes(response);
+            string responseString = response.HttpResponseToString();
+            byte[] responseBuffer = Encoding.ASCII.GetBytes(responseString);
             stream.Write(responseBuffer, 0, responseBuffer.Length);
+
+            stream.Close();
         }
-
-        public string ReceiveMessage(NetworkStream stream)
-        {
-            byte[] buffer = new byte[1024];
-            int bytesReceived = stream.Read(buffer, 0, buffer.Length);
-            return Encoding.ASCII.GetString(buffer, 0, bytesReceived);
-        }
-
-        public void Stop()
-        {
-            listener.Stop();
-        }
-
-        public void printRequest()  // just there for debug reason
-        {
-            Console.WriteLine("Request wird gehandelt: \n");
-            Console.WriteLine("Protocol is: \t" + rq.Protocol);
-            Console.WriteLine("Method is: \t" + rq.Method);
-            Console.WriteLine("Path is: \t" + rq.Path);
-            Console.WriteLine("Headers are:");
-            foreach (var line in rq.Headers!)
-            {
-                Console.WriteLine("\t" + line.Key + ": \t" + line.Value);
-            }
-            Console.WriteLine("Body contains:");
-
-            foreach (JObject obj in rq.Body!)
-            {
-                // Iterate over the keys and values in the object
-                foreach (var property in obj)
-                {
-                    Console.WriteLine("\t" + property.Key + ":\t" + property.Value);
-                }
-                Console.WriteLine("\n\r");
-            }
-        }
-
     }
 }
-
-
-

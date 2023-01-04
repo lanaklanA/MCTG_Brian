@@ -1,12 +1,12 @@
 ﻿namespace MCTG_Brian.Server
 {
-    class ResponseHandler
+    public class ResponseContainer
     {
         public int Status { get; set; }
         public string ContentType { get; set; }
         public string Body { get; set; }
 
-        public ResponseHandler(int statusCode, string contentType, string body)
+        public ResponseContainer(int statusCode, string contentType, string body)
         {
             Status = statusCode;
             ContentType = contentType;

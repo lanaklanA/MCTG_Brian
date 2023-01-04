@@ -2,7 +2,7 @@
 
 namespace MCTG_Brian.Server
 {
-    class RequestHandler
+    public class RequestContainer
     {
         public string? Method { get; set; }
         public string? Path { get; set; }
@@ -10,7 +10,7 @@ namespace MCTG_Brian.Server
         public Dictionary<string, string>? Headers { get; set; }
         public JArray? Body { get; set; }
 
-        public void ParseRequest(string data) //  public static dynamic ParseRequest(string data)
+        public RequestContainer(string data)
         {
             // Zerteile die Anfrage in Zeilen
             string[] lines = data.Split(new[] { "\r\n" }, StringSplitOptions.None);
@@ -22,10 +22,10 @@ namespace MCTG_Brian.Server
             string protocol = firstLine[2];
 
             //Erstellen eines neues Request-Objekt
-            Method = method;
-            Path = path;
-            Protocol = protocol;
-            Headers = new Dictionary<string, string>();
+            this.Method = method;
+            this.Path = path;
+            this.Protocol = protocol;
+            this.Headers = new Dictionary<string, string>();
 
             // Parse die Header-Zeilen
             for (int i = 1; i < lines.Length; i++)
@@ -52,26 +52,7 @@ namespace MCTG_Brian.Server
             }
         }
 
-        public string HandleRequest()
-        {
-            switch (Path)
-            {
-                case "/users":
-                    return "\nBody contains: i'm in users\n";
-                case "/packages":
-                    return "\nBody contains: i'm in packages\n";
-                case "/cards":
-                    return "\nBody contains: i'm in cards\n";
-                case "/game":
-                    return "\nBody contains: i'm in game\n";
-                case "/trading":
-                    return "\nBody contains: i'm in trading\n";
-                default:
-                    return "\nBody contains: Hi there, this is the content of my Body!\n";
-            }
-
-        }
-
+     
         private void ParseBody(string HttpBody)
         {
             // Parsing empty string to valid JsonObject#
