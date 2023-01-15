@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
+using System.Xml.Linq;
 
 namespace MCTG_Brian.Server
 {
@@ -52,7 +53,13 @@ namespace MCTG_Brian.Server
             }
         }
 
-     
+        public string getNameFromToken()
+        {
+            string token = Headers["Authorization"];
+            return token.Split(" ")[1].Split("-")[0];
+        }
+
+
         private void ParseBody(string HttpBody)
         {
             // Parsing empty string to valid JsonObject#

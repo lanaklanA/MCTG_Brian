@@ -1,81 +1,162 @@
-﻿using MCTG_Brian.Database;
-using MCTG_Brian.User;
+﻿using MCTG_Brian.Auth;
+using MCTG_Brian.Database;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Net.Sockets;
+using System.Reflection.PortableExecutable;
+using System.Runtime.ConstrainedExecution;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace MCTG_Brian.Server
 {
     public static class RestAPI
-    {
-        private static string connString = "Host=localhost;Username=postgres;Password=qwerqwer;Database=postgres";
-        private static readonly UserRepository userRepo = new UserRepository(new Database.Database(connString));
+    {        
 
-        public static void Controller(RequestContainer request, NetworkStream stream)
+        public static void HandleRequest(RequestContainer request, NetworkStream stream)
         {
+            UserRepository.InitDb();
+            CardRepository.InitDb();
+            PackRepository.InitDb();
+            DeckRepository.InitDb();
+            StackRepository.InitDb();
 
-            switch (request.Method) 
+
+            switch (request.Method)
             {
                 case "GET":
 
-                    var user1 = userRepo.GetUserById(Guid.Parse("4e38b8ab-53cb-40d5-aa3b-6524f5bb715d"));
-                    Console.WriteLine("[GET] User bekommen: " + user1.Name);
-                    SendMessage(stream, "[GET] User bekommen");
-                    
+                    if(request.Path == "/cards")
+                    {
+                        User loggedInUser = UserRepository.USERS.ByUniq( request.getNameFromToken() );
+                        List<Card> UsersStack = new StackRepository().GetAll(loggedInUser.Id);
+               
+                        foreach(var Card in UsersStack)
+                        {
+                            Console.WriteLine(Card.Id + " " + Card.Name + " " + Card.Damage);
+                        }
 
-                break;
+                        SendMessage(stream, "[GET] User bekommen");
+                    }
 
+                    if(request.Path == "/deck")
+                    {
+                        
+                        List<Card> Decks = new DeckRepository().GetAll( Guid.Parse("b2b63683-3454-4f50-8362-992ced439808") );
 
-                    
+                        foreach (var Card in Decks)
+                        {
+                            Console.WriteLine(Card.Id + " " + Card.Name + " " + Card.Damage);
+                        }
+                    }
+                   
+                    break;
+
                 case "POST":
+                   
+                    if(request.Path == "/users") 
+                    {
+                        if (UserRepository.USERS.ByUniq( (string)request.Body[0]["Username"] ) == null)
+                        {
+                            UserRepository.USERS.Add( new User((JObject)request.Body[0]) );
+                            SendMessage(stream, "User hinzugefügt");
+                        }
+                        else
+                        {
+                            SendMessage(stream, "User gibt es schon");
+                        }
+                        
+                    }
                     
-                    var user = new User.User
-                    { 
-                        Name = "MalWasNeues",
-                        Password = "MalWasNeues",
-                    };
+                    if(request.Path == "/sessions")
+                    {
+                        string catchedUsername = (string)request.Body[0]["Username"];
+                        User loggedInUser = UserRepository.USERS.ByUniq(catchedUsername);
+                        User dataBaseUser = new User( (JObject)request.Body[0] );
 
-                    userRepo.AddUser(user);
-                    Console.WriteLine("[POST] User hinzugefügt");
-                    SendMessage(stream, "[POST] User hinzugefügt");
-                    
+                        if (loggedInUser.Name == dataBaseUser.Name && loggedInUser.Password == dataBaseUser.Password)
+                        {
+                            Authentication.loginUser(loggedInUser);
+                            SendMessage(stream, "User gibt es und wurde eingeloggt");
+                        }
+                        else
+                        {
+                            SendMessage(stream, "Die Credential sind falsch");
+                        }
+                    }
+
+                    if (request.Path == "/packages" /* && user is admin */)
+                    {
+                        List<Guid> GuidCollection = new List<Guid>();
+
+                        foreach (JObject card in request.Body)
+                        {
+                            CardRepository.CARDS.Add( new Card(card) );
+                            GuidCollection.Add(Guid.Parse( (string)card["Id"]) );
+                        }
+                        PackRepository.PACKS.Add( GuidCollection );
+
+                        SendMessage(stream, "Karten wurde gesendet");
+                    }
+
+
+                    if (request.Path == "/transactions/packages")
+                    {                       
+                        Tuple<Guid, List<Guid>> newPackage = new PackRepository().GetRandPackage();
+
+                        string Username = request.getNameFromToken();
+                        User loggedInUser = UserRepository.USERS.ByUniq(Username);
+
+
+                        PackRepository.PACKS.Delete(newPackage.Item1);
+                        foreach (var x in newPackage.Item2)
+                        {
+                            StackRepository.STACK.Add(new Tuple<User, Guid>(loggedInUser, x));
+                        }
+
+                        SendMessage(stream, "Karten wurde gesendet");
+                    }
+
                     break;
 
 
-             
-                case "DELETE":
-                    
-                    userRepo.DeleteUser(Guid.Parse("b6fc004e-e029-47c6-aed6-bd770473c193"));
-                    Console.WriteLine("[DELETE] User wurde geloescht");
-                    SendMessage(stream, "[DELETE] User wurde geloescht");
 
-                    
+                case "DELETE":
+                    // coming soon ...
                     break;
 
 
                 case "PUT":
-
-                    var updatedUser = new User.User
+                    if(request.Path == "/deck")
                     {
-                        Id = Guid.Parse("44cac76a-cf5d-4c2c-b68b-8635d505d233"),
-                        Name = "NeuerName",
-                        Password = "NeuesPassword",
-                    };
+                        Dictionary<Guid, Guid> deck = new Dictionary<Guid, Guid>();
+                        string Username = request.getNameFromToken();
+                        User user = UserRepository.USERS.ByUniq(Username);
 
 
-                    userRepo.UpdateUser(updatedUser);
-                    Console.WriteLine("[PUT] User wurde geupdated");
-                    SendMessage(stream, "[PUT] User wurde geupdated");
-                    
+                        foreach (var x in request.Body)
+                        {
+                            Guid cardId = Guid.Parse((string)x);
+                            deck.Add(cardId, user.Id);
+                        }
 
+                        DeckRepository.DECKS.Add(deck);
+                        
+                        SendMessage(stream, "Es klappt");
+                    }
                     break;
+            
             }
 
-
+            UserRepository.CloseDb();
+            CardRepository.CloseDb();
+            PackRepository.CloseDb();
+            DeckRepository.CloseDb();
+            StackRepository.CloseDb();
         }
 
         public static void SendMessage(NetworkStream stream, string body)
@@ -90,4 +171,6 @@ namespace MCTG_Brian.Server
             stream.Close();
         }
     }
+
+
 }

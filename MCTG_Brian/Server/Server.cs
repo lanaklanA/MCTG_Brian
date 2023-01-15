@@ -6,6 +6,7 @@ using System.Diagnostics;
 using Newtonsoft.Json.Linq;
 using System.Text.Json.Nodes;
 using System.IO;
+using MCTG_Brian.Database;
 
 namespace MCTG_Brian.Server
 {
@@ -33,20 +34,16 @@ namespace MCTG_Brian.Server
                 // Accept incoming connection
                 TcpClient client = listener.AcceptTcpClient();
 
+                // Receive message
+                NetworkStream stream = client.GetStream();
+                string HttpRequest = ReceiveMessage(stream);
+
                 // Start a new thread to handle the request
-                Thread thread = new Thread(() => ThreadRequest(client));
+                Thread thread = new Thread(() => RestAPI.HandleRequest(new RequestContainer(HttpRequest), stream));
                 thread.Start();
             }
         }
-        public void ThreadRequest(TcpClient client)
-        {
-            // Receive message
-            NetworkStream stream = client.GetStream();
-            string HttpRequest = ReceiveMessage(stream);
-
-            // Handle message
-            RestAPI.Controller( new RequestContainer(HttpRequest), stream );
-        }
+   
 
         public static string ReceiveMessage(NetworkStream stream)
         {
@@ -59,6 +56,7 @@ namespace MCTG_Brian.Server
         {
             listener?.Stop();
         }
+
 
     }
 }
