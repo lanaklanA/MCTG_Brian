@@ -14,16 +14,24 @@ namespace MCTG_Brian.Database
         public Guid Id { get; set; }
         public string Name { get; set; }
         public string Password { get; set; }
+        public string Bio { get; set; }
+        public string Image { get; set; }
         public bool isLoggedIn { get; set; }
               
         public User(JObject json)
         {
-            Id = (Guid)json["Id"];
+            if (!json.TryGetValue("Id", out JToken id))
+            {
+                Id = Guid.NewGuid();
+            }
+            else
+            {
+                Id = (Guid)id;
+            }
+
+
             Name = (string)json["Username"];
             Password = (string)json["Password"];
         }
-
-   
     }
-
 }

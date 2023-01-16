@@ -53,12 +53,7 @@ namespace MCTG_Brian.Server
             }
         }
 
-        public string getNameFromToken()
-        {
-            string token = Headers["Authorization"];
-            return token.Split(" ")[1].Split("-")[0];
-        }
-
+       
 
         private void ParseBody(string HttpBody)
         {

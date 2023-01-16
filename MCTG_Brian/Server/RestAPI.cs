@@ -1,162 +1,195 @@
 ﻿using MCTG_Brian.Auth;
+using MCTG_Brian.Battle;
 using MCTG_Brian.Database;
 using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.Contracts;
-using System.Linq;
 using System.Net.Sockets;
-using System.Reflection.PortableExecutable;
-using System.Runtime.ConstrainedExecution;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace MCTG_Brian.Server
 {
     public static class RestAPI
     {        
+        public static BattleLobby     Lobby = new BattleLobby();
+        public static UserRepository  userRepo = new UserRepository();
+        public static CardRepository  cardRepo = new CardRepository();
+        public static PackRepository  packRepo = new PackRepository();
+        public static StackRepository stackRepo = new StackRepository();
+        public static DeckRepository  deckRepo = new DeckRepository();
 
         public static void HandleRequest(RequestContainer request, NetworkStream stream)
         {
-            UserRepository.InitDb();
-            CardRepository.InitDb();
-            PackRepository.InitDb();
-            DeckRepository.InitDb();
-            StackRepository.InitDb();
-
-
             switch (request.Method)
             {
                 case "GET":
 
-                    if(request.Path == "/cards")
+                    if (request.Path == "/cards" && Authentication.hasToken(request))
                     {
-                        User loggedInUser = UserRepository.USERS.ByUniq( request.getNameFromToken() );
+                        User loggedInUser = userRepo.ByUniq( Authentication.getNameFromToken(request) );
                         List<Card> UsersStack = new StackRepository().GetAll(loggedInUser.Id);
-               
-                        foreach(var Card in UsersStack)
+
+                        foreach (var Card in UsersStack)
                         {
                             Console.WriteLine(Card.Id + " " + Card.Name + " " + Card.Damage);
                         }
 
-                        SendMessage(stream, "[GET] User bekommen");
+                        SendMessage(stream, "User wird ausgegeben");
                     }
-
-                    if(request.Path == "/deck")
+                    else if(request.Path == "/cards" && !Authentication.hasToken(request))
                     {
-                        
-                        List<Card> Decks = new DeckRepository().GetAll( Guid.Parse("b2b63683-3454-4f50-8362-992ced439808") );
+                        SendMessage(stream, "Token nicht vorhanden");
+                    }
 
-                        foreach (var Card in Decks)
+                    if(request.Path.StartsWith("/users"))
+                    {
+                        string catchUsername = request.Path.Split("/")[2];
+
+                        User user = userRepo.ByUniq(catchUsername);
+                        Console.WriteLine(user.Id + " " + user.Name + " " + user.Password);
+                        SendMessage(stream, "User gelistet");
+                    }
+
+                    if (request.Path == "/deck")
+                    {
+                        User cachedUser = userRepo.ByUniq( Authentication.getNameFromToken(request) );
+
+                        List<Card> Decks = deckRepo.GetAll( cachedUser.Id );
+
+                        if(Decks.Count() > 0)
                         {
-                            Console.WriteLine(Card.Id + " " + Card.Name + " " + Card.Damage);
+                            foreach (var Card in Decks)
+                            {
+                                Console.WriteLine("karte");
+                                Console.WriteLine(Card.Id + " " + Card.Name + " " + Card.Damage);
+                            }
+                            SendMessage(stream, "Decks wurde ausgegeben");
+
+                        }
+                        else
+                        {
+                            SendMessage(stream, "Decks sind unkonfiguriert");
+
                         }
                     }
-                   
+
                     break;
 
                 case "POST":
-                   
-                    if(request.Path == "/users") 
+
+                    if (request.Path == "/battles")
                     {
-                        if (UserRepository.USERS.ByUniq( (string)request.Body[0]["Username"] ) == null)
+                        string Username = Authentication.getNameFromToken(request);
+                        User player = userRepo.ByUniq(Username);
+
+                        Lobby.startLobby(player);
+                        Lobby.log.printProtocol();                     
+
+                        SendMessage(stream, "Battle really done");
+                    }
+
+                    if (request.Path == "/users")
+                    {
+                        if (userRepo.ByUniq( Authentication.getName(request) ) == null)
                         {
-                            UserRepository.USERS.Add( new User((JObject)request.Body[0]) );
+                            userRepo.Add(new User((JObject)request.Body[0]));
                             SendMessage(stream, "User hinzugefügt");
                         }
                         else
                         {
                             SendMessage(stream, "User gibt es schon");
                         }
-                        
-                    }
-                    
-                    if(request.Path == "/sessions")
-                    {
-                        string catchedUsername = (string)request.Body[0]["Username"];
-                        User loggedInUser = UserRepository.USERS.ByUniq(catchedUsername);
-                        User dataBaseUser = new User( (JObject)request.Body[0] );
 
-                        if (loggedInUser.Name == dataBaseUser.Name && loggedInUser.Password == dataBaseUser.Password)
+                    }
+
+                    if (request.Path == "/sessions")
+                    {
+                        User cachedUser = userRepo.ByUniq( Authentication.getName(request) );
+
+                        if (cachedUser.Name == Authentication.getName(request) && cachedUser.Password == Authentication.getPassword(request))
                         {
-                            Authentication.loginUser(loggedInUser);
-                            SendMessage(stream, "User gibt es und wurde eingeloggt");
+                            Authentication.loginUser(cachedUser);
+                            SendMessage(stream, "User eingeloggt");
                         }
                         else
                         {
-                            SendMessage(stream, "Die Credential sind falsch");
+                            SendMessage(stream, "User nicht eingeloggt");
                         }
                     }
 
-                    if (request.Path == "/packages" /* && user is admin */)
+                    if (request.Path.StartsWith("/packages") && Authentication.isAdmin(request))
                     {
                         List<Guid> GuidCollection = new List<Guid>();
 
                         foreach (JObject card in request.Body)
                         {
-                            CardRepository.CARDS.Add( new Card(card) );
-                            GuidCollection.Add(Guid.Parse( (string)card["Id"]) );
+                           cardRepo.Add(new Card(card));
+                            GuidCollection.Add(Guid.Parse((string)card["Id"]));
                         }
-                        PackRepository.PACKS.Add( GuidCollection );
+                        packRepo.Add(GuidCollection);
 
                         SendMessage(stream, "Karten wurde gesendet");
                     }
-
+                    else if(request.Path.StartsWith("/packages") && !Authentication.isAdmin(request))
+                    {
+                        SendMessage(stream, "Karten wurden nicht hinzugefügt, du bist kein Admin");
+                    }
 
                     if (request.Path == "/transactions/packages")
                     {                       
-                        Tuple<Guid, List<Guid>> newPackage = new PackRepository().GetRandPackage();
+                        Tuple<Guid, List<Guid>> newPackage = packRepo.GetRandPackage();
+                        string nameFromToken = Authentication.getNameFromToken(request);
+                        User loggedInUser = userRepo.ByUniq(nameFromToken);
+                        int countContent = packRepo.Count();
 
-                        string Username = request.getNameFromToken();
-                        User loggedInUser = UserRepository.USERS.ByUniq(Username);
-
-
-                        PackRepository.PACKS.Delete(newPackage.Item1);
-                        foreach (var x in newPackage.Item2)
-                        {
-                            StackRepository.STACK.Add(new Tuple<User, Guid>(loggedInUser, x));
+                        if(countContent > 0)
+                        { 
+                            packRepo.Delete(newPackage.Item1);
+                        
+                            foreach (var Card in newPackage.Item2)
+                            {
+                                stackRepo.Add(new Tuple<User, Guid>(loggedInUser, Card));
+                            }
+                            SendMessage(stream, "Karten wurde gesendet");
                         }
-
-                        SendMessage(stream, "Karten wurde gesendet");
+                        else
+                        {
+                            SendMessage(stream, "Keine Packete vorhanden!");
+                        }
                     }
 
                     break;
-
-
-
-                case "DELETE":
-                    // coming soon ...
-                    break;
-
 
                 case "PUT":
                     if(request.Path == "/deck")
                     {
-                        Dictionary<Guid, Guid> deck = new Dictionary<Guid, Guid>();
-                        string Username = request.getNameFromToken();
-                        User user = UserRepository.USERS.ByUniq(Username);
+                        Dictionary<Guid, Guid> deckCollection = new Dictionary<Guid, Guid>();
+                        string cachedUser = Authentication.getNameFromToken(request);
+                        Console.WriteLine(cachedUser);
+                        User user = userRepo.ByUniq(cachedUser);
 
 
-                        foreach (var x in request.Body)
+                        foreach (string CardId in request.Body)
                         {
-                            Guid cardId = Guid.Parse((string)x);
-                            deck.Add(cardId, user.Id);
+                            deckCollection.Add(Guid.Parse(CardId), user.Id);
                         }
 
-                        DeckRepository.DECKS.Add(deck);
-                        
-                        SendMessage(stream, "Es klappt");
+                        if (deckCollection.Count() > 3)
+                        {
+                            deckRepo.Add(deckCollection);
+                            SendMessage(stream, "Es klappt");
+                        }
+                        else
+                        {
+                            SendMessage(stream, "Zu wenig Karten");
+                        }
                     }
+
                     break;
-            
+
+                case "DELETE":
+                    break;
             }
 
-            UserRepository.CloseDb();
-            CardRepository.CloseDb();
-            PackRepository.CloseDb();
-            DeckRepository.CloseDb();
-            StackRepository.CloseDb();
+            //UserRepository.CloseDb();
         }
 
         public static void SendMessage(NetworkStream stream, string body)
