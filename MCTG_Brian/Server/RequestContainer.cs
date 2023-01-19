@@ -76,6 +76,11 @@ namespace MCTG_Brian.Server
             }
             Body = jsonArray;
         }
+
+        public string getToken()
+        {
+            return Headers.ContainsKey("Authorization") ? Headers["Authorization"].Replace("Basic ", "") : null;
+        }
     }
 }
 

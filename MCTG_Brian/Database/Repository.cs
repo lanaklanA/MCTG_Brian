@@ -1,23 +1,6 @@
-﻿using Microsoft.VisualBasic;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Npgsql;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
-using System.Threading.Channels;
-using System.Threading.Tasks;
-using static Npgsql.Replication.PgOutput.Messages.RelationMessage;
-using System.Xml.Linq;
-using System.Xml.Schema;
-using System.Data;
-using System.ComponentModel;
-using Npgsql.Internal.TypeHandlers.NumericHandlers;
-using System.ComponentModel.Design.Serialization;
-using System.Reflection;
 
 namespace MCTG_Brian.Database
 {
@@ -29,52 +12,123 @@ namespace MCTG_Brian.Database
         
         public Repository() 
         {
-            InitDb();
-        }
-
-        public void InitDb()
-        {                                                                       // wenn das Programm terminiert, machen
             Connection = new NpgsqlConnection(_CONNECTION_STRING);              // die Db-Verbindung her
             Connection.Open();
-        }
-
-        public void CloseDb()
-        {                                                                       // wenn das Programm terminiert, machen
-            Connection.Close();                                                 // wir die Db-Verbindung brav wieder zu
-            Connection.Dispose();
         }
 
         public abstract void Add(T elm);                                        // Add-Methode 
         public abstract void Update(T elm);                                     // Update-Methode
         public abstract void Delete(Guid id);                                   // Delete-Methode
         public abstract T ByUniq(string Username);                           // Delete-Methode
-        public abstract int Count(); //count noch entfernen und ein getAll machen? oder bei packages einfach diese granual machen
     }
 
-    public class UserRepository : Repository<User>
+    public class StatsRepository : Repository<Stats>
     {
-        private object lockThread = new object();
+        private object lockThread = new object(); // TODO: brauch ich das? testen und weggeben
 
-        public override int Count()
+        public override void Add(Stats stat)
+        {
+            lock (lockThread)
+            {
+
+                using (var command = Connection.CreateCommand())
+                {
+                    command.CommandText = "INSERT INTO stats (userid, elo, wins, loses, draws) VALUES (@UserId, @Elo, @Wins, @Loses, @Draws)";
+                    command.Parameters.AddWithValue("UserId", stat.UserId);
+                    command.Parameters.AddWithValue("Elo", stat.Elo);
+                    command.Parameters.AddWithValue("Wins", stat.Wins);
+                    command.Parameters.AddWithValue("Loses", stat.Loses);
+                    command.Parameters.AddWithValue("Draws", stat.Draws);
+                    command.Prepare();
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+        public override void Update(Stats stat)
+        {
+            lock (lockThread)
+            {
+                using (var command = Connection.CreateCommand())
+                {
+                    //command.CommandText = "UPDATE stats SET elo = @Elo, wins = @Wins, loses = @Loses, draws = @Draws WHERE userid = @UserId";
+                    command.CommandText = "INSERT INTO stats (userid, elo, wins, loses, draws) VALUES (@UserId, @Elo, @Wins, @Loses, @Draws) ON CONFLICT (userid) DO UPDATE SET elo = excluded.elo, wins = excluded.wins, loses = excluded.loses, draws = excluded.draws;";
+                    command.Parameters.AddWithValue("UserId", stat.UserId);
+                    command.Parameters.AddWithValue("Elo", stat.Elo);
+                    command.Parameters.AddWithValue("Wins", stat.Wins);
+                    command.Parameters.AddWithValue("Loses", stat.Loses);
+                    command.Parameters.AddWithValue("Draws", stat.Draws);
+                    command.Prepare();
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+        public override void Delete(Guid id) {}
+        public override Stats ByUniq(string userGuid)
         {
             using (var command = Connection.CreateCommand())
             {
-                command.CommandText = "SELECT COUNT(*) FROM cards";
+                
+                command.CommandText = "SELECT stats.id, userid, users.name, elo, wins, loses, draws FROM stats Join users on stats.userid = users.id WHERE userId = @Id";
+                command.Parameters.AddWithValue("Id", Guid.Parse(userGuid));
 
+                lock(lockThread)
+                {
 
                 using (var reader = command.ExecuteReader())
                 {
                     if (reader.Read())
                     {
-                        return reader.GetInt32(0);
+                        var stat = new Stats
+                        {
+                            Id = reader.GetGuid(0),
+                            UserId = reader.GetGuid(1),
+                            Username = reader.GetString(2),
+                            Elo = reader.GetInt32(3),
+                            Wins = reader.GetInt32(4),
+                            Loses = reader.GetInt32(5),
+                            Draws = reader.GetInt32(6)
+                        };
+                        return stat;
                     }
                     else
                     {
-                        return 0;
+                        return null;
                     }
+                }
                 }
             }
         }
+        public List<Stats> GetAll()
+        {
+            using (var command = Connection.CreateCommand())
+            {
+                command.CommandText = "SELECT stats.id, userid, users.name, elo, wins, loses, draws FROM stats Join users on stats.userid = users.id";
+
+                using (var reader = command.ExecuteReader())
+                {
+                    List<Stats> stats = new List<Stats>();
+                    while (reader.Read())
+                    {
+                        var stat = new Stats
+                        {
+                            Id = reader.GetGuid(0),
+                            UserId = reader.GetGuid(1),
+                            Username = reader.GetString(2),
+                            Elo = reader.GetInt32(3),
+                            Wins = reader.GetInt32(4),
+                            Loses = reader.GetInt32(5),
+                            Draws = reader.GetInt32(6)
+                        };
+                        stats.Add(stat);
+                    }
+                    return stats;
+                }
+            }
+        }
+    }
+    public class UserRepository : Repository<User>
+    {
+        private object lockThread = new object(); // TODO: brauch ich das? testen und weggeben
         public override void Add(User user)
         {
             using (var command = Connection.CreateCommand())
@@ -141,29 +195,8 @@ namespace MCTG_Brian.Database
             }
         }
     }
-
     public class CardRepository : Repository<Card>
     {
-        public override int Count()
-        {
-            using (var command = Connection.CreateCommand())
-            {
-                command.CommandText = "SELECT COUNT(*) FROM packages";
-              
-
-                using (var reader = command.ExecuteReader())
-                {
-                    if (reader.Read())
-                    {
-                        return reader.GetInt32(0);
-                    }
-                    else
-                    {
-                        return 0;
-                    }
-                }
-            }
-        }
         public override void Add(Card card)
         {
             using (var command = Connection.CreateCommand())
@@ -227,10 +260,9 @@ namespace MCTG_Brian.Database
             }
         }
     }
-
     public class PackRepository : Repository<List<Guid>>
     {
-        public override int Count()
+        public int Count()
         {
             using (var command = Connection.CreateCommand())
             {
@@ -330,29 +362,10 @@ namespace MCTG_Brian.Database
             }
         }
     }
-
     public class StackRepository : Repository<Tuple<User, Guid>>
     {
-        public override int Count()
-        {
-            using (var command = Connection.CreateCommand())
-            {
-                command.CommandText = "SELECT COUNT(*) FROM cards";
+        private object lockThread = new object(); // TODO: brauch ich das? testen und weggeben
 
-
-                using (var reader = command.ExecuteReader())
-                {
-                    if (reader.Read())
-                    {
-                        return reader.GetInt32(0);
-                    }
-                    else
-                    {
-                        return 0;
-                    }
-                }
-            }
-        }
         public override void Add(Tuple<User, Guid> stack)
         {
             using (var command = Connection.CreateCommand())
@@ -453,33 +466,12 @@ namespace MCTG_Brian.Database
         }
       
     }
-
     public class DeckRepository : Repository<Dictionary<Guid, Guid>>
     {
         private object lockThread = new object();
-
-        public override int Count()
-        {
-            using (var command = Connection.CreateCommand())
-            {
-                command.CommandText = "SELECT COUNT(*) FROM cards";
-
-
-                using (var reader = command.ExecuteReader())
-                {
-                    if (reader.Read())
-                    {
-                        return reader.GetInt32(0);
-                    }
-                    else
-                    {
-                        return 0;
-                    }
-                }
-            }
-        }
+        
         public override void Add(Dictionary<Guid, Guid> Deck)
-        {
+            {
 
             foreach(var x in Deck)
             {
@@ -528,39 +520,31 @@ namespace MCTG_Brian.Database
 
             lock (lockThread)
             {
-            using (var command = Connection.CreateCommand())
-            {
+                using (var command = Connection.CreateCommand())
+                {
 
-                command.CommandText = "SELECT cards.id, cards.name, cards.damage FROM deck JOIN cards ON deck.card1 = cards.id OR deck.card2 = cards.id OR deck.card3 = cards.id OR deck.card4 = cards.id WHERE deck.userid = @Id";
-                command.Parameters.AddWithValue("Id", userId);
+                    command.CommandText = "SELECT cards.id, cards.name, cards.damage FROM deck JOIN cards ON deck.card1 = cards.id OR deck.card2 = cards.id OR deck.card3 = cards.id OR deck.card4 = cards.id WHERE deck.userid = @Id";
+                    command.Parameters.AddWithValue("Id", userId);
 
-                    using (var reader = command.ExecuteReader())
-                    {
-                        List<Card> cards = new List<Card>();
-                        while (reader.Read())
+                        using (var reader = command.ExecuteReader())
                         {
-                            var json = new JObject
+                            List<Card> cards = new List<Card>();
+                            while (reader.Read())
                             {
-                                ["Id"] = reader.GetGuid(0),
-                                ["Name"] = reader.GetString(1),
-                                ["Damage"] = reader.GetDouble(2)
-                            };
-                            cards.Add(new Card(json));
-                        }
+                                var json = new JObject
+                                {
+                                    ["Id"] = reader.GetGuid(0),
+                                    ["Name"] = reader.GetString(1),
+                                    ["Damage"] = reader.GetDouble(2)
+                                };
+                                cards.Add(new Card(json));
+                            }
 
-                       
-                        return cards;
+                            return cards;
                     }
                 }
             }
         }
-
-
-
-
-
-
-
 
    
         public override Dictionary<Guid, Guid> ByUniq(string id)
@@ -594,37 +578,3 @@ namespace MCTG_Brian.Database
 
 
 
-
-
-/*
- 
- 
-            using (var connection = new NpgsqlConnection(_CONNECTION_STRING))
-            {
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = "SELECT card1.name as card_name, card1.damage as card_damage, card1.id as card_id FROM deck JOIN cards as card1 ON card1.id = deck.card1\r\nUNION \r\nSELECT card2.name as card_name, card2.damage as card_damage, card2.id as card_id FROM deck JOIN cards as card2 ON card2.id = deck.card2 UNION SELECT card3.name as card_name, card3.damage as card_damage, card3.id as card_id FROM deck JOIN cards as card3 ON card3.id = deck.card3 UNION SELECT card4.name as card_name, card4.damage as card_damage, card4.id as card_id FROM deck JOIN cards as card4 ON card4.id = deck.card4;";
-                    using (var reader = command.ExecuteReader())
-                    {
-                        List<Card> cards = new List<Card>();
-                        while (reader.Read())
-                        {
-                            var json = new JObject
-                            {
-                                ["Name"] = reader.GetString(0),
-                                ["Damage"] = reader.GetDouble(1),
-                                ["Id"] = reader.GetGuid(2)
-                            };
-                            cards.Add(new Card(json));
-                        }
-
-                        //foreach (var x in cards)
-                        //{
-                        //    Console.WriteLine(x.Id + " " + x.Name + " " + x.Damage);
-                        //}
-                        return cards;
-                    }
-                }
-            }
- */

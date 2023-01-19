@@ -14,7 +14,7 @@ namespace MCTG_Brian.Battle
         public DeckRepository deckRepo = new();
 
         public Battle battle = new Battle();
-        public BattleLog log = new BattleLog();
+        public BattleLogger log = new BattleLogger();
         public Queue<User> users = new Queue<User>();
         
         private object syncPrimitive = new object();

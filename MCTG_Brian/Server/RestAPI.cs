@@ -9,12 +9,14 @@ namespace MCTG_Brian.Server
 {
     public static class RestAPI
     {        
-        public static BattleLobby     Lobby = new BattleLobby();
         public static UserRepository  userRepo = new UserRepository();
         public static CardRepository  cardRepo = new CardRepository();
         public static PackRepository  packRepo = new PackRepository();
         public static StackRepository stackRepo = new StackRepository();
         public static DeckRepository  deckRepo = new DeckRepository();
+        public static StatsRepository statsRepo = new StatsRepository();
+
+        public static BattleLobby     Lobby = new BattleLobby();
 
         public static void HandleRequest(RequestContainer request, NetworkStream stream)
         {
@@ -22,35 +24,39 @@ namespace MCTG_Brian.Server
             {
                 case "GET":
 
-                    if (request.Path == "/cards" && Authentication.hasToken(request))
+                    if (request.Path == "/cards" && Authentication.isUserLoggedIn(request))
                     {
-                        User loggedInUser = userRepo.ByUniq( Authentication.getNameFromToken(request) );
+                        User loggedInUser = Authentication.GetUserViaToken(request.getToken());
                         List<Card> UsersStack = new StackRepository().GetAll(loggedInUser.Id);
 
                         foreach (var Card in UsersStack)
                         {
-                            Console.WriteLine(Card.Id + " " + Card.Name + " " + Card.Damage);
+                            Console.WriteLine($"{Card.Id} {Card.Name} {Card.Damage} {Card.Element} {Card.Monster}");
                         }
 
                         SendMessage(stream, "User wird ausgegeben");
                     }
-                    else if(request.Path == "/cards" && !Authentication.hasToken(request))
+                    else if(request.Path == "/cards")
                     {
-                        SendMessage(stream, "Token nicht vorhanden");
+                        SendMessage(stream, "Not logged in");
                     }
 
-                    if(request.Path.StartsWith("/users"))
-                    {
-                        string catchUsername = request.Path.Split("/")[2];
+                    if(request.Path.StartsWith("/users") && Authentication.isUserLoggedIn(request))
+                    { 
+                        string catchUsername = request.Path.Replace("/users/", "");
+                        User user = Authentication.GetUserViaName(catchUsername);
 
-                        User user = userRepo.ByUniq(catchUsername);
                         Console.WriteLine(user.Id + " " + user.Name + " " + user.Password);
                         SendMessage(stream, "User gelistet");
                     }
-
-                    if (request.Path == "/deck")
+                    else if(request.Path.StartsWith("/users"))
                     {
-                        User cachedUser = userRepo.ByUniq( Authentication.getNameFromToken(request) );
+
+                    }
+
+                    if (request.Path.StartsWith("/deck") && Authentication.isUserLoggedIn(request))
+                    {
+                        User cachedUser = Authentication.GetUserViaToken(request.getToken());
 
                         List<Card> Decks = deckRepo.GetAll( cachedUser.Id );
 
@@ -62,45 +68,52 @@ namespace MCTG_Brian.Server
                                 Console.WriteLine(Card.Id + " " + Card.Name + " " + Card.Damage);
                             }
                             SendMessage(stream, "Decks wurde ausgegeben");
-
                         }
                         else
                         {
                             SendMessage(stream, "Decks sind unkonfiguriert");
-
                         }
+                    }
+                    else if (request.Path == "/deck")
+                    {
+                        SendMessage(stream, "Not logged in");
+                    }
+
+                    if (request.Path.StartsWith("/stats") && Authentication.isUserLoggedIn(request))
+                    {
+                        User cachedUser = Authentication.GetUserViaToken(request.getToken());
+                        Stats userStats = statsRepo.ByUniq(cachedUser.Id.ToString());
+
+                        Console.WriteLine($"{userStats.Id} {userStats.UserId} with Name {userStats.Username} has Elo: {userStats.Elo} Wins: {userStats.Wins} Loses: {userStats.Loses} Draws: {userStats.Draws}");
+
+                        SendMessage(stream, "Stats werden ausgegeben");    
+                    }
+                    else if (request.Path == "/stats")
+                    {
+                        SendMessage(stream, "Not logged in");
+                    }
+
+                    if (request.Path.StartsWith("/score") && Authentication.isUserLoggedIn(request))
+                    {
+                        List<Stats> allStats = statsRepo.GetAll();
+
+                        foreach(var userStats in allStats)
+                        {
+                            Console.WriteLine($"{userStats.Id} {userStats.UserId} with Name {userStats.Username} has Elo: {userStats.Elo} Wins: {userStats.Wins} Loses: {userStats.Loses} Draws: {userStats.Draws}");
+                        }
+                        SendMessage(stream, "Stats von jedem werden ausgegeben");
+
+                    }
+                    else if (request.Path == "/score")
+                    {
+                        SendMessage(stream, "Not logged in");
                     }
 
                     break;
-
+                    
                 case "POST":
 
-                    if (request.Path == "/battles")
-                    {
-                        string Username = Authentication.getNameFromToken(request);
-                        User player = userRepo.ByUniq(Username);
-
-                        Lobby.startLobby(player);
-                        Lobby.log.printProtocol();                     
-
-                        SendMessage(stream, "Battle really done");
-                    }
-
-                    if (request.Path == "/users")
-                    {
-                        if (userRepo.ByUniq( Authentication.getName(request) ) == null)
-                        {
-                            userRepo.Add(new User((JObject)request.Body[0]));
-                            SendMessage(stream, "User hinzugefügt");
-                        }
-                        else
-                        {
-                            SendMessage(stream, "User gibt es schon");
-                        }
-
-                    }
-
-                    if (request.Path == "/sessions")
+                    if (request.Path.StartsWith("/sessions"))
                     {
                         User cachedUser = userRepo.ByUniq( Authentication.getName(request) );
 
@@ -114,8 +127,62 @@ namespace MCTG_Brian.Server
                             SendMessage(stream, "User nicht eingeloggt");
                         }
                     }
+                    
+                    if (request.Path.StartsWith("/users"))
+                    {
+                        if (userRepo.ByUniq( Authentication.getName(request) ) == null)
+                        {
+                            userRepo.Add(new User((JObject)request.Body[0]));
+                            SendMessage(stream, "User hinzugefügt");
+                        }
+                        else
+                        {
+                            SendMessage(stream, "User gibt es schon");
+                        }
 
-                    if (request.Path.StartsWith("/packages") && Authentication.isAdmin(request))
+                    }
+
+                    if (request.Path.StartsWith("/battles") && Authentication.isUserLoggedIn(request))
+                    {
+                        User player = Authentication.GetUserViaToken(request.getToken());
+                        Stats playerStats = statsRepo.ByUniq(player.Id.ToString());
+
+                        Lobby.startLobby(player);
+                        Lobby.log.printProtocol();
+
+                        Console.WriteLine($"Winner: {Lobby.log.winner} and Loser: {Lobby.log.loser}");
+
+                        if (player == Lobby.log.winner)
+                        {
+                            playerStats.updateWinStats();
+                            SendMessage(stream, "Du hast gewonnen");
+                        }
+                        else if (player == Lobby.log.loser)
+                        {
+                            playerStats.updateLoseStats();
+                      
+                            SendMessage(stream, "Du hast verloren");
+                        }
+                        else
+                        {
+                            playerStats.updateDrawStats();
+                            SendMessage(stream, "Unentschieden");
+                        }
+
+                        statsRepo.Update(playerStats);
+                   
+
+                        // TODO: DeckDelete from Table
+                        // TODO: UpdateDeck at both players 
+
+                        //SendMessage(stream, "Battle really done");
+                    }
+                    else if(request.Path.StartsWith("/battles"))
+                    {
+                        SendMessage(stream, "User nicht eingeloggt");
+                    }
+
+                    if (request.Path.StartsWith("/packages") && Authentication.isUserLoggedIn(request) && Authentication.isAdmin(request) )
                     {
                         List<Guid> GuidCollection = new List<Guid>();
 
@@ -128,19 +195,21 @@ namespace MCTG_Brian.Server
 
                         SendMessage(stream, "Karten wurde gesendet");
                     }
-                    else if(request.Path.StartsWith("/packages") && !Authentication.isAdmin(request))
+                    else if(request.Path.StartsWith("/packages") && !Authentication.isUserLoggedIn(request))
+                    {
+                        SendMessage(stream, "Karten wurden nicht hinzugefügt, du bist nicht eingeloggt");
+                    }
+                    else if (request.Path.StartsWith("/packages") && !Authentication.isAdmin(request))
                     {
                         SendMessage(stream, "Karten wurden nicht hinzugefügt, du bist kein Admin");
                     }
 
-                    if (request.Path == "/transactions/packages")
-                    {                       
+                    if (request.Path.StartsWith("/transactions/packages") && Authentication.isUserLoggedIn(request))
+                    {
                         Tuple<Guid, List<Guid>> newPackage = packRepo.GetRandPackage();
-                        string nameFromToken = Authentication.getNameFromToken(request);
-                        User loggedInUser = userRepo.ByUniq(nameFromToken);
-                        int countContent = packRepo.Count();
+                        User loggedInUser = Authentication.GetUserViaToken(request.getToken());
 
-                        if(countContent > 0)
+                        if(packRepo.Count() > 0)
                         { 
                             packRepo.Delete(newPackage.Item1);
                         
@@ -155,17 +224,19 @@ namespace MCTG_Brian.Server
                             SendMessage(stream, "Keine Packete vorhanden!");
                         }
                     }
+                    else if(request.Path.StartsWith("/transactions/packages") )
+                    {
+                            SendMessage(stream, "User nicht eingeloggt");
+                    }
 
                     break;
 
                 case "PUT":
-                    if(request.Path == "/deck")
+                    if(request.Path.StartsWith("/deck") && Authentication.isUserLoggedIn(request))
                     {
                         Dictionary<Guid, Guid> deckCollection = new Dictionary<Guid, Guid>();
-                        string cachedUser = Authentication.getNameFromToken(request);
-                        Console.WriteLine(cachedUser);
-                        User user = userRepo.ByUniq(cachedUser);
 
+                        User user = Authentication.GetUserViaToken(request.getToken());
 
                         foreach (string CardId in request.Body)
                         {
@@ -182,14 +253,17 @@ namespace MCTG_Brian.Server
                             SendMessage(stream, "Zu wenig Karten");
                         }
                     }
+                    else if(request.Path.StartsWith("/deck"))
+                    {
+                        SendMessage(stream, "User nicht eingeloggt");
+                    }
 
                     break;
 
                 case "DELETE":
                     break;
-            }
 
-            //UserRepository.CloseDb();
+            }
         }
 
         public static void SendMessage(NetworkStream stream, string body)
@@ -204,6 +278,4 @@ namespace MCTG_Brian.Server
             stream.Close();
         }
     }
-
-
 }

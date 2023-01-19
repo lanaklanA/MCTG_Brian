@@ -16,7 +16,7 @@ namespace MCTG_Brian.Database
         public string Password { get; set; }
         public string Bio { get; set; }
         public string Image { get; set; }
-        public bool isLoggedIn { get; set; }
+  
               
         public User(JObject json)
         {
