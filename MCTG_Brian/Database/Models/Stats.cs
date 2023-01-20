@@ -16,16 +16,7 @@
             Loses = 0;
             Draws = 0;
         }
-        //public Stats(Guid userId)
-        //{
-        //    UserId = userId;
-        //    Username = "";
-        //    Elo = 100;
-        //    Wins = 0;
-        //    Loses = 0;
-        //    Draws = 0;
-        //}
-
+       
         public void updateWinStats()
         {
             Elo += 10;

@@ -38,6 +38,8 @@ namespace MCTG_Brian.Database.Models
         }
 
         public Card() { }
+
+        //TODO: ANSCHAUEN WARUM 0 VERWEISE!! KANN SEIN DAS TYPE ELEMNT; ETC NICHT GENOMMEN WIRD UND DAS GANZE NICHT GEHT? TEST INDEM ICH EINE KARTE AUSGABE
         public Card(JObject json)
         {
             Id = (Guid)json["Id"];

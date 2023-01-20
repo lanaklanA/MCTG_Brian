@@ -12,8 +12,6 @@ namespace MCTG_Brian.Battle
 {
     public class BattleLobby
     {
-        public DeckRepository deckRepo = new();
-
         public Battle battle = new Battle();
         public BattleLogger log = new BattleLogger();
         public Queue<User> users = new Queue<User>();
@@ -21,11 +19,11 @@ namespace MCTG_Brian.Battle
         private object syncPrimitive = new object();
 
         public User p1, p2;
-        public List<Card> incomingDeck1 = new List<Card>();
-        public List<Card> incomingDeck2 = new List<Card>();
 
-        public void startLobby(User player)
+        public bool joinLobby(User player)
         {
+
+
             lock (syncPrimitive)
             {
                 users.Enqueue(player);
@@ -35,14 +33,14 @@ namespace MCTG_Brian.Battle
                     p1 = users.Dequeue();
                     p2 = users.Dequeue();
 
-                    incomingDeck1 = deckRepo.GetAll(p1.Id);
-                    incomingDeck2 = deckRepo.GetAll(p2.Id);
+                    if (p1.Deck.Count() + p2.Deck.Count() != 8) 
+                    {
+                        log.addToProtocol($"Die Decks sind nicht breit! P1 ({p1.Deck.Count()}) P2 ({p2.Deck.Count()})");
+                        return false;
+                    }
 
-                    Tuple<User, List<Card>> Deck1 = new Tuple<User, List<Card>>(p1, incomingDeck1);
-                    Tuple<User, List<Card>> Deck2 = new Tuple<User, List<Card>>(p2, incomingDeck2);
+                    log = battle.startBattle(p1, p2);
 
-                    log = battle.startBattle(Deck1, Deck2);
-             
                     Monitor.Pulse(syncPrimitive);
                 }
                 else
@@ -50,6 +48,7 @@ namespace MCTG_Brian.Battle
                     Monitor.Wait(syncPrimitive);
                 }
             }
+            return true;
 
         }
     }

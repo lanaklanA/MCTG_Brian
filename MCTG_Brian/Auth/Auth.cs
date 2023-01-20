@@ -41,12 +41,9 @@ namespace MCTG_Brian.Authentication
             return (string)request.Body[0]["Username"];
         }
 
-        public static bool isAdmin(RequestContainer request)
+        public static bool isAdmin(string token)
         {
-            string token = request.Headers["Authorization"];
-            string name = token.Split(" ")[1].Split("-")[0];
-
-            return name == "admin";
+            return token.Contains("admin");
         }
     }
 }
