@@ -77,7 +77,25 @@ namespace MCTG_Brian.Server
             Body = jsonArray;
         }
 
-        public string getToken()
+        public bool HasQueryParameter(string key, string value)
+        {
+            int queryStartIndex = Path.IndexOf("?");
+            if (queryStartIndex == -1) return false;
+
+            string queryString = Path.Substring(queryStartIndex + 1);
+            string[] queryParams = queryString.Split("&");
+            foreach (string queryParam in queryParams)
+            {
+                string[] keyValue = queryParam.Split("=");
+                if (keyValue[0] == key && keyValue[1] == value)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public string? getToken()
         {
             return Headers.ContainsKey("Authorization") ? Headers["Authorization"].Replace("Basic ", "") : null;
         }

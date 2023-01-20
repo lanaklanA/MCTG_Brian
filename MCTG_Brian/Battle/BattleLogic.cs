@@ -1,4 +1,4 @@
-﻿using MCTG_Brian.Database;
+﻿using MCTG_Brian.Database.Models;
 
 namespace MCTG_Brian.Battle
 {

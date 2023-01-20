@@ -1,4 +1,4 @@
-﻿namespace MCTG_Brian.Database
+﻿namespace MCTG_Brian.Database.Models
 {
     public class Stats
     {
@@ -28,19 +28,19 @@
 
         public void updateWinStats()
         {
-            this.Elo += 10;
-            this.Wins += 1;
+            Elo += 10;
+            Wins += 1;
         }
 
         public void updateLoseStats()
         {
-            this.Elo -= 10;
-            this.Loses += 1;
+            Elo -= 10;
+            Loses += 1;
         }
 
         public void updateDrawStats()
         {
-            this.Draws += 1;
+            Draws += 1;
         }
     }
 }

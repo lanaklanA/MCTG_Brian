@@ -1,59 +1,25 @@
-﻿using MCTG_Brian.Database;
+﻿using MCTG_Brian.Database.Models;
 using MCTG_Brian.Server;
-using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace MCTG_Brian.Auth
+namespace MCTG_Brian.Authentication
 {
-    public static class Authentication
+    public static class Auth
     {
         private static Dictionary<string, User> loggedUser = new Dictionary<string, User>();
-
-        public static void printLoggedUser()
+        public static User getUser(string token)
         {
-            foreach(var x in loggedUser)
-            {
-                Console.WriteLine($"User: {x.Value.Username} mit Token {x.Key}");
-            }
+            token = token ?? "";
+            return loggedUser.FirstOrDefault(x => x.Key == token).Value ?? new User();
         }
 
-        public static User GetUserViaToken(string token)
+        public static List<User> getAll()
         {
-            return loggedUser.FirstOrDefault(x => x.Key == token).Value;
+            return loggedUser.Values.ToList();
         }
-
-        public static User GetUserViaName(string name)
+        public static void updateUser(string key, User value)
         {
-            return loggedUser.FirstOrDefault(x => x.Value.Username == name).Value;
+            loggedUser[key] = value;
         }
-
-        public static bool isUserLoggedIn(RequestContainer request)
-        {
-            return loggedUser.ContainsKey(request.getToken());
-        }
-
-        public static string getName(RequestContainer request)
-        {
-            return (string)request.Body[0]["Username"];
-        }
-
-        public static string getPassword(RequestContainer request)
-        {
-            return (string)request.Body[0]["Password"];
-        }
-
-        public static bool isAdmin(RequestContainer request)
-        {
-            string token = request.Headers["Authorization"];
-            string name = token.Split(" ")[1].Split("-")[0];
-
-            return name == "admin";
-        }
-
         public static bool loginUser(User user)
         {
             string token = $"{user.Username}-mtcgToken";
@@ -63,9 +29,24 @@ namespace MCTG_Brian.Auth
 
             loggedUser.Add(token, user);
             return true;
+        }
 
+        public static bool isUserLoggedIn(string token)
+        {
+            return loggedUser.ContainsKey(token ?? "");
+        }
 
+        public static string getName(RequestContainer request)
+        {
+            return (string)request.Body[0]["Username"];
+        }
 
+        public static bool isAdmin(RequestContainer request)
+        {
+            string token = request.Headers["Authorization"];
+            string name = token.Split(" ")[1].Split("-")[0];
+
+            return name == "admin";
         }
     }
 }

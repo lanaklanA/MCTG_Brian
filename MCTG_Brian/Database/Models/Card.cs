@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System.Text.Json.Serialization;
 
-namespace MCTG_Brian.Database
+namespace MCTG_Brian.Database.Models
 {
     public class Card
     {
@@ -44,7 +44,7 @@ namespace MCTG_Brian.Database
             Name = (string)json["Name"];
             Damage = (double)json["Damage"];
 
-            Type    = DetermineCardType(Name);
+            Type = DetermineCardType(Name);
             Element = DetermineElementType(Name);
             Monster = DetermineMonsterType(Name);
         }

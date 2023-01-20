@@ -1,4 +1,4 @@
-﻿using MCTG_Brian.Database;
+﻿using MCTG_Brian.Database.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;

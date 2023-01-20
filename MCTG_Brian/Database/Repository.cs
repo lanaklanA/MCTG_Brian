@@ -1,11 +1,11 @@
-﻿using Newtonsoft.Json;
+﻿using MCTG_Brian.Database.Models;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Npgsql;
 using NpgsqlTypes;
 
 namespace MCTG_Brian.Database
 {
-
     public abstract class Repository<T>
     {
         private const string _CONNECTION_STRING = "Host = localhost; Username = postgres; Password = qwerqwer; Database = postgres";
@@ -23,110 +23,6 @@ namespace MCTG_Brian.Database
         public abstract T ByUniq(string Username);                           // Delete-Methode
     }
 
-    public class StatsRepository : Repository<Stats>
-    {
-        private object lockThread = new object(); // TODO: brauch ich das? testen und weggeben
-
-        public override void Add(Stats stat)
-        {
-            lock (lockThread)
-            {
-
-                using (var command = Connection.CreateCommand())
-                {
-                    command.CommandText = "INSERT INTO stats (userid, elo, wins, loses, draws) VALUES (@UserId, @Elo, @Wins, @Loses, @Draws)";
-                   // command.Parameters.AddWithValue("UserId", stat.UserId);
-                    command.Parameters.AddWithValue("Elo", stat.Elo);
-                    command.Parameters.AddWithValue("Wins", stat.Wins);
-                    command.Parameters.AddWithValue("Loses", stat.Loses);
-                    command.Parameters.AddWithValue("Draws", stat.Draws);
-                    command.Prepare();
-                    command.ExecuteNonQuery();
-                }
-            }
-        }
-        public override void Update(Stats stat)
-        {
-            lock (lockThread)
-            {
-                using (var command = Connection.CreateCommand())
-                {
-                    //command.CommandText = "UPDATE stats SET elo = @Elo, wins = @Wins, loses = @Loses, draws = @Draws WHERE userid = @UserId";
-                    command.CommandText = "INSERT INTO stats (userid, elo, wins, loses, draws) VALUES (@UserId, @Elo, @Wins, @Loses, @Draws) ON CONFLICT (userid) DO UPDATE SET elo = excluded.elo, wins = excluded.wins, loses = excluded.loses, draws = excluded.draws;";
-                    //command.Parameters.AddWithValue("UserId", stat.UserId);
-                    command.Parameters.AddWithValue("Elo", stat.Elo);
-                    command.Parameters.AddWithValue("Wins", stat.Wins);
-                    command.Parameters.AddWithValue("Loses", stat.Loses);
-                    command.Parameters.AddWithValue("Draws", stat.Draws);
-                    command.Prepare();
-                    command.ExecuteNonQuery();
-                }
-            }
-        }
-        public override void Delete(Guid id) {}
-        public override Stats ByUniq(string userGuid)
-        {
-            using (var command = Connection.CreateCommand())
-            {
-                
-                command.CommandText = "SELECT stats.id, userid, users.name, elo, wins, loses, draws FROM stats Join users on stats.userid = users.id WHERE userId = @Id";
-                command.Parameters.AddWithValue("Id", Guid.Parse(userGuid));
-
-                lock(lockThread)
-                {
-
-                using (var reader = command.ExecuteReader())
-                {
-                    if (reader.Read())
-                    {
-                        var stat = new Stats
-                        {
-                            Id = reader.GetGuid(0),
-                            //UserId = reader.GetGuid(1),
-                            //Username = reader.GetString(2),
-                            Elo = reader.GetInt32(3),
-                            Wins = reader.GetInt32(4),
-                            Loses = reader.GetInt32(5),
-                            Draws = reader.GetInt32(6)
-                        };
-                        return stat;
-                    }
-                    else
-                    {
-                        return null;
-                    }
-                }
-                }
-            }
-        }
-        public List<Stats> GetAll()
-        {
-            using (var command = Connection.CreateCommand())
-            {
-                command.CommandText = "SELECT stats.id, userid, users.name, elo, wins, loses, draws FROM stats Join users on stats.userid = users.id";
-
-                using (var reader = command.ExecuteReader())
-                {
-                    List<Stats> stats = new List<Stats>();
-                    while (reader.Read())
-                    {
-                        var stat = new Stats
-                        {
-                            Id = reader.GetGuid(0),
-                            //UserId = reader.GetGuid(1),
-                            //Username = reader.GetString(2),
-                            Elo = reader.GetInt32(3),
-                            Wins = reader.GetInt32(4),
-                            Loses = reader.GetInt32(5),
-                            Draws = reader.GetInt32(6)
-                        };
-                        stats.Add(stat);
-                    }
-                    return stats;
-                }
-            }
-        }
-    }
     public class UserRepository : Repository<User>
     {
         private object lockThread = new object(); // TODO: brauch ich das? testen und weggeben
@@ -218,7 +114,7 @@ namespace MCTG_Brian.Database
             }
         }
     }
-    public class CardRepository : Repository<Card>
+    public class CardRepository : Repository<Card> // vllt zu tuple<user, card> umändenr
     { 
         public void Add(User user, Card card)
         {
@@ -231,6 +127,37 @@ namespace MCTG_Brian.Database
                 command.Parameters.AddWithValue("Damage", card.Damage);
                 command.Prepare();
                 command.ExecuteNonQuery();
+            }
+        }
+
+        public bool ChangeDepot(List<Guid> cardsId, User user)
+        {
+            using (var command = Connection.CreateCommand())
+            {
+                long rowAffected = 0;
+                foreach(Guid cardId in cardsId)
+                {
+                    command.CommandText = "SELECT COUNT(ID) FROM cards WHERE id = @Id AND owner = @Owner AND depot = 'stack'";
+                    command.Parameters.AddWithValue("Id", cardId);
+                    command.Parameters.AddWithValue("Owner", user.Id);
+                    rowAffected += (long)command.ExecuteScalar();
+                    command.Parameters.Clear();
+                    Console.WriteLine($"rowaffected: {rowAffected}");
+                }
+
+                if (rowAffected != 4) return false;
+                    Console.WriteLine($"wird geupadeted");
+
+                foreach (Guid cardId in cardsId)
+                { 
+                    command.CommandText = "UPDATE cards SET depot = CASE depot WHEN 'stack' THEN 'deck' ELSE 'stack' END WHERE id = @Id AND owner = @Owner";
+                    command.Parameters.AddWithValue("Id", cardId);
+                    command.Parameters.AddWithValue("Owner", user.Id);
+                    command.ExecuteNonQuery();
+                    command.Parameters.Clear();
+                }
+
+                return true;
             }
         }
 
@@ -287,6 +214,8 @@ namespace MCTG_Brian.Database
             }
         }
 
+      
+
         public List<Card> GetCards(Guid userId, bool obj = false)
         {
             var cards = new List<Card>();
@@ -318,26 +247,6 @@ namespace MCTG_Brian.Database
     }
     public class PackRepository : Repository<List<Card>>
     {
-        public int Count()
-        {
-            using (var command = Connection.CreateCommand())
-            {
-                command.CommandText = "SELECT COUNT(*) FROM packages";
-
-
-                using (var reader = command.ExecuteReader())
-                {
-                    if (reader.Read())
-                    {
-                        return reader.GetInt32(0);
-                    }
-                    else
-                    {
-                        return 0;
-                    }
-                }
-            }
-        }
         public override void Add(List<Card> pack)
         {
             using (var command = Connection.CreateCommand())
@@ -425,111 +334,6 @@ namespace MCTG_Brian.Database
             }
         }
     }
-    /*
-    public class StackRepository : Repository<Tuple<User, Guid>>
-    {
-        private object lockThread = new object(); // TODO: brauch ich das? testen und weggeben
-
-        public override void Add(Tuple<User, Guid> stack)
-        {
-            using (var command = Connection.CreateCommand())
-            {
-                command.CommandText = "INSERT INTO stacks (id, owner, cardid) VALUES (@Id, @User, @Card)";
-                command.Parameters.AddWithValue("Id", stack.Item2);
-                command.Parameters.AddWithValue("User", stack.Item1.Id);
-                command.Parameters.AddWithValue("Card", stack.Item2);
-                command.Prepare();
-                command.ExecuteNonQuery();
-            }
-        }
-        public override void Update(Tuple<User, Guid> stack)
-        {
-            using (var command = Connection.CreateCommand())
-            {
-                command.CommandText = "UPDATE stacks SET user = @User, card = @Card WHERE id = @Id";
-               // command.Parameters.AddWithValue("Id", stack.Key);
-               // command.Parameters.AddWithValue("User", stack.Key);
-               // command.Parameters.AddWithValue("Card", stack.Value);
-
-                command.Prepare();
-                command.ExecuteNonQuery();
-            }
-        }
-        public override void Delete(Guid id)
-        {
-            using (var command = Connection.CreateCommand())
-            {
-                command.CommandText = "DELETE FROM stacks WHERE id = @Id";
-                command.Parameters.AddWithValue("Id", id);
-
-                command.Prepare();
-                command.ExecuteNonQuery();
-            }
-        }
-        public List<Card> GetAll(Guid id)
-        {
-            using (var command = Connection.CreateCommand())
-            {
-                ;
-                command.CommandText = "SELECT cards.id, name, damage FROM stacks JOIN cards ON stacks.cardid = cards.id WHERE owner = @User";
-                command.Parameters.AddWithValue("User", id);
-
-                using (var reader = command.ExecuteReader())
-                {
-                    if (reader.Read())
-                    {
-
-                        List<Card> cards = new List<Card>();
-                        while (reader.Read())
-                        {
-                            var json = new JObject
-                            {
-                                ["Id"] = reader.GetGuid(0),
-                                ["Name"] = reader.GetString(1),
-                                ["Damage"] = reader.GetDouble(2)
-                            };
-
-                            cards.Add(new Card(json));
-                        }
-                        return cards;
-
-                    }
-                    else
-                    {
-                        return new List<Card>();
-                    }
-                }
-            }
-
-        }
-        public override Tuple<User, Guid> ByUniq(string id)
-        {
-            return null;
-        //    using (var command = Connection.CreateCommand())
-        //    {
-        //        command.CommandText = "SELECT user, card FROM stacks WHERE id = @Id";
-        //        command.Parameters.AddWithValue("Id", id);
-
-        //        using (var reader = command.ExecuteReader())
-        //        {
-        //            if (reader.Read())
-        //            {
-        //                var user = reader.GetString(0);
-        //                var card = reader.GetString(1);
-        //                var stack = new Dictionary<User, Card>();
-        //                stack.Add(user, card);
-        //                return stack;
-        //            }
-        //            else
-        //            {
-        //                return new Dictionary<User, Card>();
-        //            }
-        //        }
-        //    }
-        }
-      
-    }
-    */
     public class DeckRepository : Repository<Dictionary<Guid, Guid>>
     {
         private object lockThread = new object();
@@ -639,53 +443,3 @@ namespace MCTG_Brian.Database
 
     }
 }
-
-
-
-/*
- 
-  using (var reader = command.ExecuteReader())
-                    {
-                        if (reader.Read())
-                        {
-                            var user = new User
-                            {
-                                Id = reader.GetGuid(0),
-                                Username = reader.GetString(1),
-                                Password = reader.GetString(2),
-                                Coins = reader.GetInt32(3),
-                                Bio = reader.IsDBNull(4) ? null : reader.GetString(4),
-                                Image = reader.IsDBNull(5) ? null : reader.GetString(5),
-                                Stats = new Stats
-                                {
-                                    Id = reader.GetGuid(6),
-                                    Elo = reader.GetInt32(7),
-                                    Wins = reader.GetInt32(8),
-                                    Loses = reader.GetInt32(9),
-                                    Draws = reader.GetInt32(10)
-                                },
-                                Stack = new List<Card>()
-                            };
-
-                            user.Stack.Add(new Card
-                            {
-                                Id = reader.GetGuid(11),
-                                Name = reader.GetString(12),
-                                Damage = reader.GetDouble(13),
-                            });
-                            while (reader.Read())
-                            {
-                                user.Stack.Add(new Card
-                                {
-                                    Id = reader.GetGuid(11),
-                                    Name = reader.GetString(12),
-                                    Damage = reader.GetDouble(13),
-                                });
-                            }
-                            return user;
-                        }
-                        else
-                        {
-                            return null;
-                      
- */
