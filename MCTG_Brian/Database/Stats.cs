@@ -3,8 +3,6 @@
     public class Stats
     {
         public Guid Id { get; set; }
-        public Guid UserId { get; set; }
-        public string Username { get; set; }
         public int Elo { get; set; }
         public int Wins { get; set; }
         public int Loses { get; set; }
@@ -13,22 +11,20 @@
         public Stats()
         {
             Id = Guid.NewGuid();
-            UserId = Guid.NewGuid();
-            Username = "";
             Elo = 100;
             Wins = 0;
             Loses = 0;
             Draws = 0;
         }
-        public Stats(Guid userId)
-        {
-            UserId = userId;
-            Username = "";
-            Elo = 100;
-            Wins = 0;
-            Loses = 0;
-            Draws = 0;
-        }
+        //public Stats(Guid userId)
+        //{
+        //    UserId = userId;
+        //    Username = "";
+        //    Elo = 100;
+        //    Wins = 0;
+        //    Loses = 0;
+        //    Draws = 0;
+        //}
 
         public void updateWinStats()
         {

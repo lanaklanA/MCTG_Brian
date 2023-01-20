@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace MCTG_Brian.Database
 {
@@ -34,7 +35,7 @@ namespace MCTG_Brian.Database
                 using (var command = Connection.CreateCommand())
                 {
                     command.CommandText = "INSERT INTO stats (userid, elo, wins, loses, draws) VALUES (@UserId, @Elo, @Wins, @Loses, @Draws)";
-                    command.Parameters.AddWithValue("UserId", stat.UserId);
+                   // command.Parameters.AddWithValue("UserId", stat.UserId);
                     command.Parameters.AddWithValue("Elo", stat.Elo);
                     command.Parameters.AddWithValue("Wins", stat.Wins);
                     command.Parameters.AddWithValue("Loses", stat.Loses);
@@ -52,7 +53,7 @@ namespace MCTG_Brian.Database
                 {
                     //command.CommandText = "UPDATE stats SET elo = @Elo, wins = @Wins, loses = @Loses, draws = @Draws WHERE userid = @UserId";
                     command.CommandText = "INSERT INTO stats (userid, elo, wins, loses, draws) VALUES (@UserId, @Elo, @Wins, @Loses, @Draws) ON CONFLICT (userid) DO UPDATE SET elo = excluded.elo, wins = excluded.wins, loses = excluded.loses, draws = excluded.draws;";
-                    command.Parameters.AddWithValue("UserId", stat.UserId);
+                    //command.Parameters.AddWithValue("UserId", stat.UserId);
                     command.Parameters.AddWithValue("Elo", stat.Elo);
                     command.Parameters.AddWithValue("Wins", stat.Wins);
                     command.Parameters.AddWithValue("Loses", stat.Loses);
@@ -81,8 +82,8 @@ namespace MCTG_Brian.Database
                         var stat = new Stats
                         {
                             Id = reader.GetGuid(0),
-                            UserId = reader.GetGuid(1),
-                            Username = reader.GetString(2),
+                            //UserId = reader.GetGuid(1),
+                            //Username = reader.GetString(2),
                             Elo = reader.GetInt32(3),
                             Wins = reader.GetInt32(4),
                             Loses = reader.GetInt32(5),
@@ -112,8 +113,8 @@ namespace MCTG_Brian.Database
                         var stat = new Stats
                         {
                             Id = reader.GetGuid(0),
-                            UserId = reader.GetGuid(1),
-                            Username = reader.GetString(2),
+                            //UserId = reader.GetGuid(1),
+                            //Username = reader.GetString(2),
                             Elo = reader.GetInt32(3),
                             Wins = reader.GetInt32(4),
                             Loses = reader.GetInt32(5),
@@ -133,22 +134,29 @@ namespace MCTG_Brian.Database
         {
             using (var command = Connection.CreateCommand())
             {
-                command.CommandText = "INSERT INTO users (name, password) VALUES (@Name, @Password)";
-                command.Parameters.AddWithValue("Name", user.Name);
-                command.Parameters.AddWithValue("Password", user.Password);
+                command.CommandText = "INSERT INTO users (name, password) VALUES (@Name, @Password) RETURNING id;";
+                command.Parameters.AddWithValue("@Name", user.Username);
+                command.Parameters.AddWithValue("@Password", user.Password);
+                var user_id = (Guid)command.ExecuteScalar();
 
+                command.CommandText = "INSERT INTO stats (userid) VALUES (@user_id);";
+                command.Parameters.AddWithValue("@user_id", user_id);
                 command.Prepare();
                 command.ExecuteNonQuery();
             }
         }
+
         public override void Update(User user)
         {
             using (var command = Connection.CreateCommand())
             {
-                command.CommandText = "UPDATE users SET name = @Name, password = @Password WHERE id = @Id";
+                command.CommandText = "UPDATE users SET name = @Name, password = @Password, coins = @Coins, bio = @Bio, image = @Image WHERE id = @Id";
                 command.Parameters.AddWithValue("Id", user.Id);
-                command.Parameters.AddWithValue("Name", user.Name);
+                command.Parameters.AddWithValue("Name", user.Username);
                 command.Parameters.AddWithValue("Password", user.Password);
+                command.Parameters.AddWithValue("Coins", user.Coins);
+                command.Parameters.AddWithValue("Bio", user.Bio == null ? DBNull.Value : user.Bio);
+                command.Parameters.AddWithValue("Image", user.Image == null ? DBNull.Value : user.Image);
 
                 command.Prepare();
                 command.ExecuteNonQuery();
@@ -166,25 +174,40 @@ namespace MCTG_Brian.Database
             }
         }
         public override User? ByUniq(string Username)
-        {
+        { //TODO: VLLT 3 seperate abfragen, und jede einzelene befüllt unterobjekt des users (erste abfrage den user, zweite abfrage die stats und dritte abfrage den stack)
             using (var command = Connection.CreateCommand())
             {
-                command.CommandText = "SELECT id, name, password FROM users WHERE name = @Name";
+                command.CommandText = "SELECT users.id, users.name, users.password, users.coins, users.bio, users.image, stats.id, stats.elo, stats.wins, stats.loses, stats.draws FROM users JOIN stats ON stats.userid = users.id WHERE users.name = @Name";
                 command.Parameters.AddWithValue("Name", Username);
 
-                lock(lockThread)
+                lock (lockThread)
                 {
                     using (var reader = command.ExecuteReader())
                     {
                         if (reader.Read())
-                        { 
-                            var json = new JObject
+                        {
+                            var user = new User
                             {
-                                ["Id"] = reader.GetGuid(0),
-                                ["Username"] = reader.GetString(1),
-                                ["Password"] = reader.GetString(2)
+                                Id = reader.GetGuid(0),
+                                Username = reader.GetString(1),
+                                Password = reader.GetString(2),
+                                Coins = reader.GetInt32(3),
+                                Bio = reader.IsDBNull(4) ? null : reader.GetString(4),
+                                Image = reader.IsDBNull(5) ? null : reader.GetString(5),
+                                Stats = new Stats
+                                {
+                                    Id = reader.GetGuid(6),
+                                    Elo = reader.GetInt32(7),
+                                    Wins = reader.GetInt32(8),
+                                    Loses = reader.GetInt32(9),
+                                    Draws = reader.GetInt32(10)
+                                },
+                                Stack = new List<Card>(),
+                                Deck = new List<Card>()
                             };
-                            return new User(json);
+
+
+                            return user;
                         }
                         else
                         {
@@ -196,19 +219,22 @@ namespace MCTG_Brian.Database
         }
     }
     public class CardRepository : Repository<Card>
-    {
-        public override void Add(Card card)
+    { 
+        public void Add(User user, Card card)
         {
             using (var command = Connection.CreateCommand())
             {
-                command.CommandText = "INSERT INTO cards (id, name, damage) VALUES (@Id, @Name, @Damage)";
+                command.CommandText = "INSERT INTO cards (id, owner, name, damage) VALUES (@Id, @Owner, @Name, @Damage)";
                 command.Parameters.AddWithValue("Id", card.Id);
+                command.Parameters.AddWithValue("Owner", user.Id);
                 command.Parameters.AddWithValue("Name", card.Name);
                 command.Parameters.AddWithValue("Damage", card.Damage);
                 command.Prepare();
                 command.ExecuteNonQuery();
             }
         }
+
+        public override void Add(Card card) { }
         public override void Update(Card card)
         {
             using (var command = Connection.CreateCommand())
@@ -250,7 +276,8 @@ namespace MCTG_Brian.Database
                             ["Name"] = reader.GetString(1),
                             ["Damage"] = reader.GetDouble(2)
                         };
-                        return new Card(json);
+                        //return new Card(json);
+                        return new Card();
                     }
                     else
                     {
@@ -259,8 +286,37 @@ namespace MCTG_Brian.Database
                 }
             }
         }
+
+        public List<Card> GetCards(Guid userId, bool obj = false)
+        {
+            var cards = new List<Card>();
+           
+
+            using (var command = Connection.CreateCommand())
+            {
+                command.CommandText = "SELECT id, name, damage, owner FROM cards WHERE owner = @OwnerId AND depot = @Depot";
+                command.Parameters.AddWithValue("OwnerId", userId);
+                command.Parameters.AddWithValue("Depot", obj ? "deck" : "stack");
+
+                using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            cards.Add(new Card
+                            {
+                                Id = reader.GetGuid(0),
+                                Name = reader.GetString(1),
+                                Damage = reader.GetDouble(2),
+                            });
+                        }
+                    }
+                
+            }
+
+            return cards ?? null;
+        }
     }
-    public class PackRepository : Repository<List<Guid>>
+    public class PackRepository : Repository<List<Card>>
     {
         public int Count()
         {
@@ -282,17 +338,24 @@ namespace MCTG_Brian.Database
                 }
             }
         }
-        public override void Add(List<Guid> packs)
+        public override void Add(List<Card> pack)
         {
             using (var command = Connection.CreateCommand())
             {
-                command.CommandText = "INSERT INTO packages (package) VALUES (@Package)";
-                command.Parameters.AddWithValue("Package", JsonConvert.SerializeObject(packs));
+                command.CommandText = "INSERT INTO store (card1, card2, card3, card4, card5) VALUES (@Card1, @Card2, @Card3, @Card4, @Card5)";
+
+                for (int i = 0; i < 5; i++)
+                {
+                    var param = new NpgsqlParameter($"@Card{i + 1}", NpgsqlDbType.Json);
+                    param.Value = JsonConvert.SerializeObject(pack[i]);
+                    command.Parameters.Add(param);
+                }
+
                 command.Prepare();
                 command.ExecuteNonQuery();
             }
         }
-        public override void Update(List<Guid> packs)
+        public override void Update(List<Card> packs)
         {
             using (var command = Connection.CreateCommand())
             {
@@ -308,14 +371,14 @@ namespace MCTG_Brian.Database
         {
             using (var command = Connection.CreateCommand())
             {
-                command.CommandText = "DELETE FROM packages WHERE id = @Id";
+                command.CommandText = "DELETE FROM store WHERE id = @Id";
                 command.Parameters.AddWithValue("Id", id);
 
                 command.Prepare();
                 command.ExecuteNonQuery();
             }
         }
-        public override List<Guid> ByUniq(string id)
+        public override List<Card> ByUniq(string id)
         {
             using (var command = Connection.CreateCommand())
             {
@@ -326,42 +389,43 @@ namespace MCTG_Brian.Database
                 {
                     if (reader.Read())
                     {
-                        var packages = JsonConvert.DeserializeObject<List<Guid>>(reader.GetString(0));
+                        var packages = JsonConvert.DeserializeObject<List<Card>>(reader.GetString(0));
                         return packages;
                     }
                     else
                     {
-                        return new List<Guid>();
+                        return new List<Card>();
                     }
                 }
             }
         }
-        public Tuple<Guid, List<Guid>> GetRandPackage()
+        public Tuple<Guid, List<Card>> GetRandPackage()
         {
             using (var command = Connection.CreateCommand())
             {
-                command.CommandText = "SELECT id, package FROM packages LIMIT(1)";
+                command.CommandText = "SELECT * FROM store LIMIT(1)";
                 using (var reader = command.ExecuteReader())
                 {
                     if (reader.Read())
                     {
                         Guid PackageId = reader.GetGuid(0);
-                        var packages = JsonConvert.DeserializeObject<List<Guid>>(reader.GetString(1));
+                        List<Card> cards = new List<Card>();
 
-                        Tuple<Guid, List<Guid>> result = new Tuple<Guid, List<Guid>>(PackageId, packages);
-                        
-
-                        return result;
-
+                        for (int i = 1; i <= 5; i++)
+                        {
+                            cards.Add(JsonConvert.DeserializeObject<Card>(reader.GetString(i)));
+                        }
+                        return new Tuple<Guid, List<Card>>(PackageId, cards);
                     }
                     else
                     {
-                        return new Tuple<Guid, List<Guid>>(Guid.Empty, new List<Guid>());
+                        return null;
                     }
                 }
             }
         }
     }
+    /*
     public class StackRepository : Repository<Tuple<User, Guid>>
     {
         private object lockThread = new object(); // TODO: brauch ich das? testen und weggeben
@@ -402,7 +466,6 @@ namespace MCTG_Brian.Database
                 command.ExecuteNonQuery();
             }
         }
-
         public List<Card> GetAll(Guid id)
         {
             using (var command = Connection.CreateCommand())
@@ -466,6 +529,7 @@ namespace MCTG_Brian.Database
         }
       
     }
+    */
     public class DeckRepository : Repository<Dictionary<Guid, Guid>>
     {
         private object lockThread = new object();
@@ -578,3 +642,50 @@ namespace MCTG_Brian.Database
 
 
 
+/*
+ 
+  using (var reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            var user = new User
+                            {
+                                Id = reader.GetGuid(0),
+                                Username = reader.GetString(1),
+                                Password = reader.GetString(2),
+                                Coins = reader.GetInt32(3),
+                                Bio = reader.IsDBNull(4) ? null : reader.GetString(4),
+                                Image = reader.IsDBNull(5) ? null : reader.GetString(5),
+                                Stats = new Stats
+                                {
+                                    Id = reader.GetGuid(6),
+                                    Elo = reader.GetInt32(7),
+                                    Wins = reader.GetInt32(8),
+                                    Loses = reader.GetInt32(9),
+                                    Draws = reader.GetInt32(10)
+                                },
+                                Stack = new List<Card>()
+                            };
+
+                            user.Stack.Add(new Card
+                            {
+                                Id = reader.GetGuid(11),
+                                Name = reader.GetString(12),
+                                Damage = reader.GetDouble(13),
+                            });
+                            while (reader.Read())
+                            {
+                                user.Stack.Add(new Card
+                                {
+                                    Id = reader.GetGuid(11),
+                                    Name = reader.GetString(12),
+                                    Damage = reader.GetDouble(13),
+                                });
+                            }
+                            return user;
+                        }
+                        else
+                        {
+                            return null;
+                      
+ */

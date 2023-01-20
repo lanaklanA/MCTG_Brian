@@ -25,7 +25,7 @@ namespace MCTG_Brian.Battle
                 x.Damage = 0;
             }
 
-            log.addToProtocol($"Fight between {Deck1.Item1.Name} against {Deck2.Item1.Name}");
+            log.addToProtocol($"Fight between {Deck1.Item1.Username} against {Deck2.Item1.Username}");
 
             for (int rounds = 0; rounds < 100; rounds++)
             {
@@ -39,23 +39,23 @@ namespace MCTG_Brian.Battle
 
                 if (winnerCard == null)
                 {
-                    log.addToProtocol($"Player {Deck2.Item1.Name} draws with Card {player2Card.Name} (ATK {player2Card.Damage})\n");
+                    log.addToProtocol($"Player {Deck2.Item1.Username} draws with Card {player2Card.Name} (ATK {player2Card.Damage})\n");
                 }
                 else if (winnerCard == player1Card)
                 {
-                    log.addToProtocol($"Player {Deck1.Item1.Name} wins with Card {player1Card.Name} (ATK {player1Card.Damage})\n");
+                    log.addToProtocol($"Player {Deck1.Item1.Username} wins with Card {player1Card.Name} (ATK {player1Card.Damage})\n");
                     Deck1.Item2.Add(player2Card);
                     Deck2.Item2.Remove(player2Card);
                 }
                 else if (winnerCard == player2Card)
                 {
-                    log.addToProtocol($"Player {Deck2.Item1.Name} wins with Card {player2Card.Name} (ATK {player2Card.Damage})\n");
+                    log.addToProtocol($"Player {Deck2.Item1.Username} wins with Card {player2Card.Name} (ATK {player2Card.Damage})\n");
                     Deck1.Item2.Remove(player1Card);
                     Deck2.Item2.Add(player1Card);
                 }
 
 
-                log.addToProtocol($"New Deck from {Deck1.Item1.Name}");
+                log.addToProtocol($"New Deck from {Deck1.Item1.Username}");
 
                 foreach (var x in Deck1.Item2)
                 {
@@ -63,7 +63,7 @@ namespace MCTG_Brian.Battle
                 }
 
 
-                log.addToProtocol($"New Deck from {Deck2.Item1.Name}");
+                log.addToProtocol($"New Deck from {Deck2.Item1.Username}");
 
                 foreach (var x in Deck2.Item2)
                 {
@@ -74,14 +74,14 @@ namespace MCTG_Brian.Battle
 
                 if (Deck1.Item2.Count() < 1)
                 {
-                    log.addToProtocol($"{Deck2.Item1.Name} won against the other Player {Deck1.Item1.Name}");
+                    log.addToProtocol($"{Deck2.Item1.Username} won against the other Player {Deck1.Item1.Username}");
                     log.classifyUsers(Deck2.Item1, Deck1.Item1);
                     break;
                 }
 
                 if (Deck2.Item2.Count() < 1)
                 {
-                    log.addToProtocol($"{Deck1.Item1.Name} won against the other Player {Deck2.Item1.Name}");
+                    log.addToProtocol($"{Deck1.Item1.Username} won against the other Player {Deck2.Item1.Username}");
                     log.classifyUsers(Deck1.Item1, Deck2.Item1);
 
                     break;
@@ -89,7 +89,7 @@ namespace MCTG_Brian.Battle
 
                 if ((Deck1.Item2.Count() < 1 && Deck2.Item2.Count() < 1) || rounds >= 99)
                 {
-                    log.addToProtocol($"{Deck1.Item1.Name} drawed against the other Player {Deck2.Item1.Name}");
+                    log.addToProtocol($"{Deck1.Item1.Username} drawed against the other Player {Deck2.Item1.Username}");
                     log.isDraw = true;
                 }
             }

@@ -12,6 +12,7 @@ namespace MCTG_Brian.Database
         public ElementType Element { get; set; }
         public MonsterType Monster { get; set; }
 
+        public enum Depot { Deck, Stack }
         public enum CardType
         {
             Monster,
@@ -36,6 +37,7 @@ namespace MCTG_Brian.Database
             Normal,
         }
 
+        public Card() { }
         public Card(JObject json)
         {
             Id = (Guid)json["Id"];

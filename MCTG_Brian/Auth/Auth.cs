@@ -13,6 +13,14 @@ namespace MCTG_Brian.Auth
     {
         private static Dictionary<string, User> loggedUser = new Dictionary<string, User>();
 
+        public static void printLoggedUser()
+        {
+            foreach(var x in loggedUser)
+            {
+                Console.WriteLine($"User: {x.Value.Username} mit Token {x.Key}");
+            }
+        }
+
         public static User GetUserViaToken(string token)
         {
             return loggedUser.FirstOrDefault(x => x.Key == token).Value;
@@ -20,7 +28,7 @@ namespace MCTG_Brian.Auth
 
         public static User GetUserViaName(string name)
         {
-            return loggedUser.FirstOrDefault(x => x.Value.Name == name).Value;
+            return loggedUser.FirstOrDefault(x => x.Value.Username == name).Value;
         }
 
         public static bool isUserLoggedIn(RequestContainer request)
@@ -46,10 +54,18 @@ namespace MCTG_Brian.Auth
             return name == "admin";
         }
 
-        public static void loginUser(User user)
+        public static bool loginUser(User user)
         {
-            string token = $"{user.Name}-mtcgToken";
+            string token = $"{user.Username}-mtcgToken";
+
+            if (loggedUser.ContainsKey(token))
+                return false;
+
             loggedUser.Add(token, user);
+            return true;
+
+
+
         }
     }
 }
