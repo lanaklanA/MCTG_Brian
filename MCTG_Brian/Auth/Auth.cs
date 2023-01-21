@@ -9,13 +9,19 @@ namespace MCTG_Brian.Authentication
         public static User getUser(string token)
         {
             token = token ?? "";
-            return loggedUser.FirstOrDefault(x => x.Key == token).Value ?? new User();
+            return loggedUser.First(x => x.Key == token).Value ?? new User();
         }
 
         public static List<User> getAll()
         {
             return loggedUser.Values.ToList();
         }
+
+        public static User getUserViaId(Guid id)
+        {
+            return loggedUser.First(x => x.Value.Id == id).Value;
+        }
+
         public static void updateUser(string key, User value)
         {
             loggedUser[key] = value;

@@ -37,33 +37,23 @@ namespace MCTG_Brian.Database.Models
             Normal,
         }
 
-        public Card() { }
-
-        //TODO: ANSCHAUEN WARUM 0 VERWEISE!! KANN SEIN DAS TYPE ELEMNT; ETC NICHT GENOMMEN WIRD UND DAS GANZE NICHT GEHT? TEST INDEM ICH EINE KARTE AUSGABE
-        public Card(JObject json)
+        public Card(string name)
         {
-            Id = (Guid)json["Id"];
-            Name = (string)json["Name"];
-            Damage = (double)json["Damage"];
-
-            Type = DetermineCardType(Name);
-            Element = DetermineElementType(Name);
-            Monster = DetermineMonsterType(Name);
+            Name = name;
+            Type = DetermineCardType(name);
+            Element = DetermineElementType(name);
+            Monster = DetermineMonsterType(name);
         }
 
-        private CardType DetermineCardType(string name)
+        public CardType DetermineCardType(string name)
         {
-            if (name.Contains("Monster"))
-                return CardType.Monster;
             if (name.Contains("Spell"))
                 return CardType.Spell;
-            if (name.Contains("Normal"))
-                return CardType.Normal;
 
-            return CardType.Normal;
+            return CardType.Monster;
         }
 
-        private ElementType DetermineElementType(string name)
+        public ElementType DetermineElementType(string name)
         {
             if (name.Contains("Water"))
                 return ElementType.Water;
@@ -74,8 +64,8 @@ namespace MCTG_Brian.Database.Models
 
             return ElementType.Normal;
         }
-
-        private MonsterType DetermineMonsterType(string name)
+        
+        public MonsterType DetermineMonsterType(string name)
         {
             if (name.Contains("Dragon"))
                 return MonsterType.Dragon;

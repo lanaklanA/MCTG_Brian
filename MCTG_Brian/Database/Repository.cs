@@ -7,6 +7,7 @@ using NpgsqlTypes;
 namespace MCTG_Brian.Database
 {
     //TODO CHANGE LOCK TO syncPrimitive
+    //ALLES zu elm ändern!
     public abstract class Repository<T>
     {
         public static NpgsqlConnection? Connection { get; private set; }         // die Datenbankverbindung
@@ -26,6 +27,25 @@ namespace MCTG_Brian.Database
     public class UserRepository : Repository<User>
     {
         private object lockThread = new object(); // TODO: brauch ich das? testen und weggeben
+        public void UpdateStats(User user)
+        {
+            lock(lockThread)
+            {
+
+                using (var command = Connection.CreateCommand())
+                {
+                    command.CommandText = "UPDATE stats SET elo = @Elo, wins = @Wins, loses = @Loses, draws = @Draws WHERE userid = @Id";
+                    command.Parameters.AddWithValue("Id", user.Id);
+                    command.Parameters.AddWithValue("Elo", user.Stats.Elo);
+                    command.Parameters.AddWithValue("Wins", user.Stats.Wins);
+                    command.Parameters.AddWithValue("Loses", user.Stats.Loses);
+                    command.Parameters.AddWithValue("Draws", user.Stats.Draws);
+
+                    command.Prepare();
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
         public override void Add(User user)
         {
             using (var command = Connection.CreateCommand())
@@ -101,25 +121,6 @@ namespace MCTG_Brian.Database
                 }
             }
         }
-        public void UpdateStats(User user)
-        {
-            lock(lockThread)
-            {
-
-                using (var command = Connection.CreateCommand())
-                {
-                    command.CommandText = "UPDATE stats SET elo = @Elo, wins = @Wins, loses = @Loses, draws = @Draws WHERE userid = @Id";
-                    command.Parameters.AddWithValue("Id", user.Id);
-                    command.Parameters.AddWithValue("Elo", user.Stats.Elo);
-                    command.Parameters.AddWithValue("Wins", user.Stats.Wins);
-                    command.Parameters.AddWithValue("Loses", user.Stats.Loses);
-                    command.Parameters.AddWithValue("Draws", user.Stats.Draws);
-
-                    command.Prepare();
-                    command.ExecuteNonQuery();
-                }
-            }
-        }
     }
     public class CardRepository : Repository<Card> // vllt zu tuple<user, card> umändenr
     { 
@@ -136,7 +137,6 @@ namespace MCTG_Brian.Database
                 command.ExecuteNonQuery();
             }
         }
-
         public bool ChangeDepot(List<Guid> cardsId, User user)
         {
             using (var command = Connection.CreateCommand())
@@ -167,22 +167,46 @@ namespace MCTG_Brian.Database
                 return true;
             }
         }
-
-        public void ChangeOwner(List<Card> cards, User user)
+        public void ChangeOwner(Card card, User user)
         {
             using (var command = Connection.CreateCommand())
             {
-                foreach (Card card in cards)
-                {
-                    command.CommandText = "UPDATE cards SET owner = @Owner WHERE id = @Id";
-                    command.Parameters.AddWithValue("Id", card.Id);
-                    command.Parameters.AddWithValue("Owner", user.Id);
-                    command.ExecuteNonQuery();
-                    command.Parameters.Clear();
-                }
+
+                command.CommandText = "UPDATE cards SET owner = @Owner WHERE id = @Id";
+                command.Parameters.AddWithValue("Id", card.Id);
+                command.Parameters.AddWithValue("Owner", user.Id);
+                command.ExecuteNonQuery();
+                command.Parameters.Clear();
+      
             }
         }
+        public List<Card> GetCards(Guid userId, bool obj = false)
+        {
+            var cards = new List<Card>();
+           
 
+            using (var command = Connection.CreateCommand())
+            {
+                command.CommandText = "SELECT id, name, damage, owner FROM cards WHERE owner = @OwnerId AND depot = @Depot";
+                command.Parameters.AddWithValue("OwnerId", userId);
+                command.Parameters.AddWithValue("Depot", obj ? "deck" : "stack");
+
+                using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            cards.Add(new Card(reader.GetString(1))
+                            {
+                                Id = reader.GetGuid(0),
+                                Damage = reader.GetDouble(2),
+                            });
+                        }
+                    }
+                
+            }
+
+            return cards ?? null;
+        }
         public override void Add(Card card) { }
         public override void Update(Card card)
         {
@@ -208,14 +232,11 @@ namespace MCTG_Brian.Database
                 {
                     if (reader.Read())
                     {
-                        var json = new JObject
+                        return new Card(reader.GetString(1))
                         {
-                            ["Id"] = reader.GetGuid(0),
-                            ["Name"] = reader.GetString(1),
-                            ["Damage"] = reader.GetDouble(2)
+                            Id = reader.GetGuid(0),
+                            Damage = reader.GetDouble(2)
                         };
-                        //return new Card(json);
-                        return new Card();
                     }
                     else
                     {
@@ -223,35 +244,6 @@ namespace MCTG_Brian.Database
                     }
                 }
             }
-        }
-
-        public List<Card> GetCards(Guid userId, bool obj = false)
-        {
-            var cards = new List<Card>();
-           
-
-            using (var command = Connection.CreateCommand())
-            {
-                command.CommandText = "SELECT id, name, damage, owner FROM cards WHERE owner = @OwnerId AND depot = @Depot";
-                command.Parameters.AddWithValue("OwnerId", userId);
-                command.Parameters.AddWithValue("Depot", obj ? "deck" : "stack");
-
-                using (var reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            cards.Add(new Card
-                            {
-                                Id = reader.GetGuid(0),
-                                Name = reader.GetString(1),
-                                Damage = reader.GetDouble(2),
-                            });
-                        }
-                    }
-                
-            }
-
-            return cards ?? null;
         }
     }
     public class PackRepository : Repository<List<Card>>
@@ -341,6 +333,95 @@ namespace MCTG_Brian.Database
                     }
                 }
             }
+        }
+    }
+    public class TradeRepository : Repository<Trade> 
+    {
+        public override void Add(Trade elm)
+        {
+            using (var command = Connection.CreateCommand())
+            {
+                command.CommandText = "INSERT INTO trades (id, userid, cardid, tradeinfo) VALUES (@Id, @Userid, @Cardid, @Details)";
+                command.Parameters.AddWithValue("Id", elm.Id);
+                command.Parameters.AddWithValue("Userid", elm.UserId);
+                command.Parameters.AddWithValue("Cardid", elm.CardId);
+                var param = new NpgsqlParameter("@Details", NpgsqlDbType.Json);
+                param.Value = JsonConvert.SerializeObject(elm.Details);
+                command.Parameters.Add(param);
+                command.Prepare();
+                command.ExecuteNonQuery();
+            }
+        }
+        public void Delete(Guid tradeId)
+        {
+            using (var command = Connection.CreateCommand())
+            {
+                command.CommandText = "DELETE FROM trades WHERE id = @Id";
+                command.Parameters.AddWithValue("Id", tradeId);
+                command.Prepare();
+                command.ExecuteNonQuery();
+            }
+        }
+        public override void Update(Trade elm)
+        {
+            using (var command = Connection.CreateCommand())
+            {
+                command.CommandText = "UPDATE trades SET userid = @Userid, cardid = @Cardid, tradeinfo = @Details WHERE id = @Id";
+                command.Parameters.AddWithValue("Id", elm.Id);
+                command.Parameters.AddWithValue("Userid", elm.UserId);
+                command.Parameters.AddWithValue("Cardid", elm.CardId);
+                var param = new NpgsqlParameter("@Details", NpgsqlDbType.Json);
+                param.Value = JsonConvert.SerializeObject(elm.Details);
+                command.Parameters.Add(param);
+                command.Prepare();
+                command.ExecuteNonQuery();
+            }
+        }
+        public override Trade ByUniq(string elm)
+        {
+            using (var command = Connection.CreateCommand())
+            {
+                command.CommandText = "SELECT id, userid, cardid, tradeinfo FROM trades WHERE id = @Id";
+                command.Parameters.AddWithValue("Id", Guid.Parse(elm));
+                command.Prepare();
+                using (var reader = command.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        return new Trade
+                        {
+                            Id = reader.GetGuid(0),
+                            UserId = reader.GetGuid(1),
+                            CardId = reader.GetGuid(2),
+                            Details = JObject.Parse(reader.GetString(3))
+                        };
+                    }
+                }
+                return null;
+            }
+        }
+        public List<Trade> GetAll()
+        {
+            List<Trade> trades = new List<Trade>();
+            using (var command = Connection.CreateCommand())
+            {
+                command.CommandText = "SELECT id, userid, cardid, tradeinfo FROM trades";
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var trade = new Trade
+                        {
+                            Id = reader.GetGuid(0),
+                            UserId = reader.GetGuid(1),
+                            CardId = reader.GetGuid(2),
+                            Details = JObject.Parse(reader.GetString(3))
+                        };
+                        trades.Add(trade);
+                    }
+                }
+            }
+            return trades;
         }
     }
 }

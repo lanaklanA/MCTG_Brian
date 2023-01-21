@@ -4,6 +4,7 @@ using MCTG_Brian.Database;
 using MCTG_Brian.Database.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System;
 using System.Net.Sockets;
 using System.Text;
 
@@ -14,15 +15,20 @@ namespace MCTG_Brian.Server
         public static UserRepository  userRepo = new UserRepository();
         public static CardRepository  cardRepo = new CardRepository();
         public static PackRepository  packRepo = new PackRepository();
+        public static TradeRepository tradeRepo = new TradeRepository();
 
-        //ÜBERLEGEN ÜBERALL EINEN TEMPUSER ZUERSTELLEN! asntellen von dem ganzen auth.getUser(request.Token)
+        //TODO: ÜNBEALL BEI DEN METHODEN COMMENDS MACHEN MIT -> /// <-
+        //TODO: ÜBERLEGEN ÜBERALL EINEN TEMPUSER ZUERSTELLEN! asntellen von dem ganzen auth.getUser(request.Token)
         //TODO: STRINGBUILDER FÜR DIE AUSGABE; DIE DANN NACH UNTEN KOMMT! das es nur eine einmaliges sendmessage gibt. und mit tupel für den status und dem string
+        //TODO: VLLT DAS ALLES IN EIN RouteAtorization packen
+        //TODO: Passwort noch hashen!
+        
         public static BattleLobby Lobby = new BattleLobby();
 
         private static List<Tuple<string, string>> notAuthList = new List<Tuple<string, string>>()
         {
             new Tuple<string, string>("POST", "/users"),
-            new Tuple<string, string>("POST", "/sessions")
+            new Tuple<string, string>("POST", "/sessions"),
         };
         private static List<Tuple<string, string>> AuthList = new List<Tuple<string, string>>()
         {
@@ -30,12 +36,14 @@ namespace MCTG_Brian.Server
             new Tuple<string, string>("GET", "/deck"),
             new Tuple<string, string>("GET", "/stats"),
             new Tuple<string, string>("GET", "/score"),
+            new Tuple<string, string>("GET", "/tradings"), 
 
             new Tuple<string, string>("PUT", "/deck"),
             new Tuple<string, string>("PUT", "/deck"),
 
             new Tuple<string, string>("POST", "/packages"),
             new Tuple<string, string>("POST", "/battles"),
+            new Tuple<string, string>("POST", "/trades"),
             new Tuple<string, string>("POST", "/transactions/packages"),
         };
         private static List<Tuple<string, string>> AdminList = new List<Tuple<string, string>>()
@@ -45,9 +53,11 @@ namespace MCTG_Brian.Server
 
         public static void HandleRequest(RequestContainer request, NetworkStream stream)
         {
-            //VLLT DAS ALLES IN EIN RouteAtorization packen
             AuthList.Add(new Tuple<string, string>("GET", $"/users/{request.Path.Replace("/users/", "")}"));
             AuthList.Add(new Tuple<string, string>("PUT", $"/users/{request.Path.Replace("/users/", "")}"));
+            AuthList.Add(new Tuple<string, string>("POST", $"/tradings/{request.Path.Replace("/tradings/", "")}"));
+            AuthList.Add(new Tuple<string, string>("DELETE", $"/tradings/{request.Path.Replace("/tradings/", "")}"));
+            AuthList.Add(new Tuple<string, string>("POST", $"/tradings/{request.Path.Replace("/tradings/", "")}"));
 
             if (notAuthList.Contains(new Tuple<string, string>(request.Method, request.Path))) { }
             else if (AdminList.Contains(new Tuple<string, string>(request.Method, request.Path)) && (!Auth.isAdmin(request.getToken())))
@@ -97,7 +107,7 @@ namespace MCTG_Brian.Server
                         Console.WriteLine("YEAH ICH BIN DRINNEN IM FORMAR");
                     }
                     
-                    if (request.Path.StartsWith("/users/"))
+                    if (request.Path.Contains("/users/"))
                     {
                         string pathUsername = request.Path.Replace("/users/", "");
 
@@ -112,7 +122,7 @@ namespace MCTG_Brian.Server
      
                     }
 
-                    if (request.Path.StartsWith("/cards"))
+                    if (request.Path.EndsWith("/cards"))
                     {
                         foreach (Card card in Auth.getUser(request.getToken()).Stack)
                         {
@@ -122,14 +132,14 @@ namespace MCTG_Brian.Server
                         SendMessage(stream, $"KartenStack wird vom Player {Auth.getUser(request.getToken()).Username} ausgegeben!");
                     }
 
-                    if (request.Path.StartsWith("/stats"))
+                    if (request.Path.EndsWith("/stats"))
                     {
                         User tempUser = Auth.getUser(request.getToken());
 
                         SendMessage(stream, $"Id: {tempUser.Id} Name: {tempUser.Username} Pw: {tempUser.Password} Coins: {tempUser.Coins} Bio: {tempUser.Bio} Image: {tempUser.Image} Elo: {tempUser.Stats.Elo} Wins: {tempUser.Stats.Wins} Draws: {tempUser.Stats.Draws}");
                     }
                     
-                    if (request.Path.StartsWith("/score"))
+                    if (request.Path.EndsWith("/score"))
                     {
                         foreach(var tempUser in Auth.getAll())
                         {
@@ -139,12 +149,24 @@ namespace MCTG_Brian.Server
                         SendMessage(stream, "Scoreboard wurde geprinted");
                     }
 
+                    if (request.Path.EndsWith("/tradings"))
+                    {
+                        List<Trade> tempTrades = tradeRepo.GetAll();
+
+                        foreach(Trade hansi in tempTrades)
+                        {
+                            Console.WriteLine($"{hansi.Id} {hansi.CardId} {hansi.UserId} {hansi.Details["Type"]} {hansi.Details["MinimumDamage"]}  ");
+                        }
+
+                        SendMessage(stream, "Liste ausgegeben");
+
+                    }
+
                     break;
 
                 case "POST":
 
-
-                    if (request.Path.StartsWith("/battles"))
+                    if (request.Path.EndsWith("/battles"))
                     {
                         User tempUser = Auth.getUser(request.getToken());
 
@@ -170,7 +192,10 @@ namespace MCTG_Brian.Server
                         else if (tempUser == Lobby.log.loser)
                         {
                             tempUser.Stats.updateLoseStats();
-                            cardRepo.ChangeOwner(tempUser.Deck, Lobby.log.winner);
+                            foreach(Card card in tempUser.Deck)
+                            {
+                                cardRepo.ChangeOwner(card, Lobby.log.winner);
+                            }
                             SendMessage(stream, "Du hast verloren");
                         }
                         else
@@ -211,7 +236,7 @@ namespace MCTG_Brian.Server
                         //SendMessage(stream, "Battle really done");
                     }
 
-                    if (request.Path.StartsWith("/users"))
+                    if (request.Path.EndsWith("/users"))
                     {
                         User tempUser = userRepo.ByUniq(Auth.getName(request));
 
@@ -228,7 +253,7 @@ namespace MCTG_Brian.Server
 
                     }
 
-                    if (request.Path.StartsWith("/sessions"))
+                    if (request.Path.EndsWith("/sessions"))
                     {
                         User toCheck = JsonConvert.DeserializeObject<User>(request.Body[0].ToString());
 
@@ -268,7 +293,7 @@ namespace MCTG_Brian.Server
                         SendMessage(stream, "Package mit 5 Karten sind nun im Store verfügbar!");
                     }
 
-                    if (request.Path.StartsWith("/transactions/packages"))
+                    if (request.Path.EndsWith("/transactions/packages"))
                     {
                         Tuple<Guid, List<Card>> package = packRepo.GetRandPackage();
 
@@ -297,12 +322,88 @@ namespace MCTG_Brian.Server
 
                         SendMessage(stream, $"Packages mit ID ({package.Item1}) wurde User gegeben {Auth.getUser(request.getToken()).Username}!");
                     }
-                    
+
+                    if (request.Path.Contains("/tradings/"))
+                    {
+                        Trade checkTrade = tradeRepo.ByUniq(request.Path.Replace("/tradings/", ""));
+                       
+                        if(checkTrade == null)
+                        {
+                            SendMessage(stream, "Kein Trade verfügbar!");
+                            return;
+                        }
+
+                        User offerdUser = Auth.getUserViaId(checkTrade.UserId);
+                        User tradeUser = Auth.getUser(request.getToken());
+
+                        Card offerCard = offerdUser.Stack.First(x => x.Id == checkTrade.CardId);
+                        Card tradeCard = tradeUser.Stack.First(x => x.Id == Guid.Parse(request.Body[0].ToString()));
+
+                        if(offerCard == null || tradeCard == null)
+                        {
+                            SendMessage(stream, "Mind. eine Karte befindet sich nicht in einem Stack");
+                            return;
+                        }
+
+                        if(offerCard.Damage < double.Parse(checkTrade.Details["MinimumDamage"].ToString()))
+                        {
+                            SendMessage(stream, "Die Karte hat nicht den gewünschten Damage");
+                            return;
+                        }
+
+                        if   (!string.Equals(offerCard.Type.ToString(), checkTrade.Details["Type"].ToString(), StringComparison.OrdinalIgnoreCase)) 
+                        {
+                            SendMessage(stream, "Die Karte hat nicht den passende Type");
+                            return;
+                        }
+
+                        tradeUser.Stack.Add(offerCard);
+                        tradeUser.Stack.Remove(tradeCard);
+                        cardRepo.ChangeOwner(tradeCard, offerdUser);
+
+                        offerdUser.Stack.Add(tradeCard);
+                        offerdUser.Stack.Remove(offerCard);
+                        cardRepo.ChangeOwner(offerCard, tradeUser);
+
+                        tradeRepo.Delete(checkTrade.Id);
+
+                        SendMessage(stream, "Trade findet statt");
+                    }
+
+                    if (request.Path.EndsWith("/tradings"))
+                    {
+                        JObject details = new JObject();
+
+                        foreach (var item in (JObject)request.Body[0])
+                        {
+                            if (item.Key != "Id" && item.Key != "CardToTrade")
+                            {
+                                details.Add(item.Key, item.Value);
+                            }
+                        }
+
+                        Trade hansi = new Trade()
+                        {
+                            Id = Guid.Parse(request.Body[0]["Id"].ToString()),
+                            CardId = Guid.Parse(request.Body[0]["CardToTrade"].ToString()),
+                            UserId = Auth.getUser(request.getToken()).Id,
+                            Details = details
+                        };
+
+                        tradeRepo.Add(hansi);
+
+
+                        Console.WriteLine($"{hansi.Id} {hansi.CardId} {hansi.UserId} {hansi.Details["Type"]} {hansi.Details["MinimumDamage"]}  ");
+
+
+                        SendMessage(stream, "OK");
+                    }
+
                     break;
 
                 case "PUT":
 
-                    if (request.Path.StartsWith("/deck"))
+                    if (request.Path.EndsWith("/deck"))
                     {
                         List<Guid> deckIds = request.Body.ToObject<List<Guid>>();
 
@@ -325,7 +426,7 @@ namespace MCTG_Brian.Server
                         Auth.getUser(request.getToken()).Deck = cardRepo.GetCards(Auth.getUser(request.getToken()).Id, true);
                     }
 
-                    if (request.Path.StartsWith("/users/"))
+                    if (request.Path.Contains("/users/"))
                     {
                         /*
                          TODO:
@@ -345,6 +446,16 @@ namespace MCTG_Brian.Server
                         userRepo.Update(updateUser);
 
                         SendMessage(stream, $"Neuer User mit {updateUser.Id} {updateUser.Password} {updateUser.Username} {updateUser.Coins} {updateUser.Image} {updateUser.Bio}");
+                    }
+
+                    break;
+
+                case "DELETE":
+
+                    if (request.Path.Contains("/tradings/"))
+                    {
+                        tradeRepo.Delete(Guid.Parse(request.Path.Replace("/tradings/", "")));
+                        SendMessage(stream, "Trade wurde gelöscht");
                     }
 
                     break;
@@ -368,3 +479,7 @@ namespace MCTG_Brian.Server
     }
 }
 
+
+
+//Console.WriteLine($"{checkTrade.Id} {checkTrade.CardId} {checkTrade.UserId} {checkTrade.Details["Type"]} {checkTrade.Details["MinimumDamage"]}  ");
+//Console.WriteLine($"Card {card.Id} {card.Name} {card.Damage}  {card.Type}");

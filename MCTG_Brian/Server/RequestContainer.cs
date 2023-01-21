@@ -59,10 +59,15 @@ namespace MCTG_Brian.Server
         {
             // Parsing empty string to valid JsonObject#
             string jsonString = HttpBody == "" ? "{}" : HttpBody;
+            JArray jsonArray = new JArray();
+
+            if (jsonString.StartsWith("\"") && jsonString.EndsWith("\""))
+            {
+                jsonString = $"[{jsonString}]";
+            }
 
             // Parse the JSON string into a JToken
             JToken json = JToken.Parse(jsonString);
-            JArray jsonArray = new JArray();
 
             // Check if the JSON is an object or an array
             if (json.Type == JTokenType.Object)

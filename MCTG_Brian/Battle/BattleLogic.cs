@@ -4,54 +4,54 @@ namespace MCTG_Brian.Battle
 {
     public static class BattleLogic
     {
-         public static Card Calculate(Card card1, Card card2)
+        public static Card Calculate(Card card1, Card card2)
+        {
+            if (card1.Type == Card.CardType.Monster && card2.Type == Card.CardType.Monster)
             {
-                if (card1.Type == Card.CardType.Monster && card2.Type == Card.CardType.Monster)
+                if (IsMonsterAfraid(card1.Monster, card2.Monster))
                 {
-                    if (IsMonsterAfraid(card1.Monster, card2.Monster))
-                    {
-                        return card1;
-                    }
-                    if (IsMonsterControlled(card1.Monster, card2.Monster))
-                    {
-                        return card2;
-                    }
-                    if (IsMonsterImmune(card1.Monster, card2.Type))
-                    {
-                        return card2;
-                    }
-                    if (IsMonsterEvading(card1.Monster, card2.Monster))
-                    {
-                        return card2;
-                    }
-                    if (card1.Damage < card2.Damage)
-                    {
-                        return card1;
-                    }
-                    if (card1.Damage > card2.Damage)
-                    {
-                        return card2;
-                    }
-                    return null;
+                    return card1;
                 }
-                else if (card1.Type == Card.CardType.Spell && card2.Type == Card.CardType.Spell)
+                if (IsMonsterControlled(card1.Monster, card2.Monster))
                 {
-                    card1.Damage = GetSpellDamage(card1, card2);
-                    if (card1.Damage > card2.Damage)
-                    {
-                        return card2;
-                    }
-                    if (card1.Damage < card2.Damage)
-                    {
-                        return card1;
-                    }
-                    return null;
+                    return card2;
+                }
+                if (IsMonsterImmune(card1.Monster, card2.Type))
+                {
+                    return card2;
+                }
+                if (IsMonsterEvading(card1.Monster, card2.Monster))
+                {
+                    return card2;
+                }
+                if (card1.Damage < card2.Damage)
+                {
+                    return card1;
+                }
+                if (card1.Damage > card2.Damage)
+                {
+                    return card2;
                 }
                 return null;
             }
+            else if (card1.Type == Card.CardType.Spell && card2.Type == Card.CardType.Spell)
+            {
+                card1.Damage = GetSpellDamage(card1, card2);
+                if (card1.Damage > card2.Damage)
+                {
+                    return card2;
+                }
+                if (card1.Damage < card2.Damage)
+                {
+                    return card1;
+                }
+                return null;
+            }
+            return null;
+        }
 
- 
-        private static bool IsMonsterAfraid(Card.MonsterType monster1, Card.MonsterType monster2)
+
+        public static bool IsMonsterAfraid(Card.MonsterType monster1, Card.MonsterType monster2)
         {
             if (monster1 == Card.MonsterType.Goblin && monster2 == Card.MonsterType.Dragon)
             {
@@ -60,7 +60,8 @@ namespace MCTG_Brian.Battle
             return false;
         }
 
-        private static bool IsMonsterControlled(Card.MonsterType monster1, Card.MonsterType monster2)
+
+        public static bool IsMonsterControlled(Card.MonsterType monster1, Card.MonsterType monster2)
         {
             if (monster1 == Card.MonsterType.Wizard && monster2 == Card.MonsterType.Orks)
             {
@@ -69,7 +70,7 @@ namespace MCTG_Brian.Battle
             return false;
         }
 
-        private static bool IsMonsterImmune(Card.MonsterType monster1, Card.CardType cardType)
+        public static bool IsMonsterImmune(Card.MonsterType monster1, Card.CardType cardType)
         {
             if (monster1 == Card.MonsterType.Kraken && cardType == Card.CardType.Spell)
             {

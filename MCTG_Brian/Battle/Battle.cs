@@ -11,7 +11,7 @@ namespace MCTG_Brian.Battle
     {
         public BattleLogger log = new BattleLogger();
 
-        private Card catchedRndCard(List<Card> deck)
+        public Card catchedRndCard(List<Card> deck)
         {
             Random rnd = new Random();
             int randomIndex = rnd.Next(deck.Count);

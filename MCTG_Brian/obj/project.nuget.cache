@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "5dVXCkgiLWdKAxkyhKyys3Zx/XrLV5LbvQ39dg/i9LwucAPtwfdf6x7RP2p89F0JmJ1y/NrPbn5SSb5+ghmHxg==",
+  "dgSpecHash": "/wNZKCIZTFON4dBD909hFfvQq/Yk0uwYzgp0TN6oe1tw5/FENpqWfHzwkNBAbJU9vFCiA7OcD5/6bzXkJkTM/w==",
   "success": true,
   "projectFilePath": "C:\\Users\\schne\\Documents\\GitHome\\MCTG_Brian\\MCTG_Brian\\MCTG_Brian.csproj",
   "expectedPackageFiles": [
@@ -13,8 +13,11 @@
     "C:\\Users\\schne\\.nuget\\packages\\microsoft.extensions.primitives\\7.0.0\\microsoft.extensions.primitives.7.0.0.nupkg.sha512",
     "C:\\Users\\schne\\.nuget\\packages\\microsoft.netcore.platforms\\1.1.0\\microsoft.netcore.platforms.1.1.0.nupkg.sha512",
     "C:\\Users\\schne\\.nuget\\packages\\microsoft.netcore.targets\\1.1.0\\microsoft.netcore.targets.1.1.0.nupkg.sha512",
+    "C:\\Users\\schne\\.nuget\\packages\\netstandard.library\\2.0.0\\netstandard.library.2.0.0.nupkg.sha512",
     "C:\\Users\\schne\\.nuget\\packages\\newtonsoft.json\\13.0.2\\newtonsoft.json.13.0.2.nupkg.sha512",
     "C:\\Users\\schne\\.nuget\\packages\\npgsql\\7.0.1\\npgsql.7.0.1.nupkg.sha512",
+    "C:\\Users\\schne\\.nuget\\packages\\nunit\\3.13.3\\nunit.3.13.3.nupkg.sha512",
+    "C:\\Users\\schne\\.nuget\\packages\\nunit3testadapter\\4.3.1\\nunit3testadapter.4.3.1.nupkg.sha512",
     "C:\\Users\\schne\\.nuget\\packages\\runtime.native.system\\4.3.0\\runtime.native.system.4.3.0.nupkg.sha512",
     "C:\\Users\\schne\\.nuget\\packages\\runtime.unix.system.diagnostics.debug\\4.3.0\\runtime.unix.system.diagnostics.debug.4.3.0.nupkg.sha512",
     "C:\\Users\\schne\\.nuget\\packages\\runtime.win.system.diagnostics.debug\\4.3.0\\runtime.win.system.diagnostics.debug.4.3.0.nupkg.sha512",
