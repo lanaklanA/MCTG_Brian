@@ -15,13 +15,21 @@ namespace MCTG_Brian.Server
         private readonly int port;
         private readonly IPAddress ipAddress;
         private TcpListener? listener;
-        
+
+        /// <summary>
+        /// Creates a new server instance
+        /// </summary>
+        /// <param name="ipAddress"></param>
+        /// <param name="port"></param>
         public Server(string ipAddress, int port)
         {
             this.port = port;
             this.ipAddress = IPAddress.Parse(ipAddress);
         }
 
+        /// <summary>
+        /// Starts the server
+        /// </summary>
         public void Start()
         {
             listener = new TcpListener(ipAddress, port);
@@ -43,8 +51,12 @@ namespace MCTG_Brian.Server
                 thread.Start();
             }
         }
-   
 
+        /// <summary>
+        /// Receives a message from the client
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <returns></returns>
         public static string ReceiveMessage(NetworkStream stream)
         {
             byte[] buffer = new byte[1024];
@@ -52,6 +64,9 @@ namespace MCTG_Brian.Server
             return Encoding.ASCII.GetString(buffer, 0, bytesReceived);
         }
 
+        /// <summary>
+        /// Stops the server
+        /// </summary>
         public void Stop()
         {
             listener?.Stop();

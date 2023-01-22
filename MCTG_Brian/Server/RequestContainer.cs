@@ -11,6 +11,10 @@ namespace MCTG_Brian.Server
         public Dictionary<string, string>? Headers { get; set; }
         public JArray? Body { get; set; }
 
+        /// <summary>
+        /// Creates a new RequestContainer
+        /// </summary>
+        /// <param name="data"></param>
         public RequestContainer(string data)
         {
             // Zerteile die Anfrage in Zeilen
@@ -53,8 +57,10 @@ namespace MCTG_Brian.Server
             }
         }
 
-       
-
+        /// <summary>
+        /// Parses the body of the request into a JArray
+        /// </summary>
+        /// <param name="HttpBody"></param>
         private void ParseBody(string HttpBody)
         {
             // Parsing empty string to valid JsonObject#
@@ -82,6 +88,12 @@ namespace MCTG_Brian.Server
             Body = jsonArray;
         }
 
+        /// <summary>
+        /// Checks if the request has a query parameter with the given key and value
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
         public bool HasQueryParameter(string key, string value)
         {
             int queryStartIndex = Path.IndexOf("?");
@@ -100,6 +112,10 @@ namespace MCTG_Brian.Server
             return false;
         }
 
+        /// <summary>
+        /// Checks if the request has a query parameter with the given key
+        /// </summary>
+        /// <returns></returns>
         public string? getToken()
         {
             return Headers.ContainsKey("Authorization") ? Headers["Authorization"].Replace("Basic ", "") : null;

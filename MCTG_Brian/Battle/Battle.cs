@@ -6,6 +6,11 @@ namespace MCTG_Brian.Battle
     {
         public BattleLogger log = new BattleLogger();
 
+        /// <summary>
+        /// catches a random card from a deck
+        /// </summary>
+        /// <param name="deck"></param>
+        /// <returns></returns>
         public Card catchedRndCard(List<Card> deck)
         {
             Random rnd = new Random();
@@ -13,6 +18,12 @@ namespace MCTG_Brian.Battle
             return deck[randomIndex];
         }
 
+        /// <summary>
+        /// starts a battle between two players
+        /// </summary>
+        /// <param name="player1"></param>
+        /// <param name="player2"></param>
+        /// <returns></returns>
         public BattleLogger startBattle(User player1, User player2)
         {
             log.addToProtocol($"Fight between {player1.Username} against {player2.Username}");

@@ -21,6 +21,11 @@ namespace MCTG_Brian.Battle
 
         public User p1, p2;
 
+        /// <summary>
+        /// joins a user to the lobby
+        /// </summary>
+        /// <param name="player"></param>
+        /// <returns></returns>
         public bool joinLobby(User player)
         {
             lock (syncPrimitive)

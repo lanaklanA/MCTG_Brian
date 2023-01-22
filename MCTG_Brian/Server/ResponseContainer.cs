@@ -21,6 +21,13 @@ namespace MCTG_Brian.Server
             Body = body;
         }
 
+        /// <summary>
+        /// Creates the body of the response
+        /// </summary>
+        /// <param name="info"></param>
+        /// <param name="obj"></param>
+        /// <param name="proto"></param>
+        /// <returns></returns>
         public static string createBody(string? info, Object obj, bool proto) {
 
             if(proto)
@@ -44,10 +51,21 @@ namespace MCTG_Brian.Server
             return $"{info}\n\n{output}\n";
 
         }
+        
+        /// <summary>
+        /// Creates an synatx und semantik corret HttpRepsonse
+        /// </summary>
+        /// <returns></returns>
         public string HttpResponseToString()
         {
             return $"HTTP/1.1 {Status} OK\r\nContent-Type: {ContentType}\r\nContent-Length: {Body.Length}\r\n\r\n{Body}";
         }
+        
+        /// <summary>
+        /// Sends an HttpReponse in Type string to the client
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="data"></param>
         public void sendClient(NetworkStream stream, string data)
         {
             byte[] responseBuffer = Encoding.ASCII.GetBytes(data);

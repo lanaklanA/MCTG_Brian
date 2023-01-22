@@ -5,6 +5,13 @@ namespace MCTG_Brian.Battle
 {
     public static class BattleLogic
     {
+        /// <summary>
+        /// calculates the winner card of a battle
+        /// </summary>
+        /// <param name="card1"></param>
+        /// <param name="card2"></param>
+        /// <param name="testing"></param>
+        /// <returns></returns>
         public static Card? Calculate(Card card1, Card card2, bool testing = false)
         {
             if(testing)
@@ -66,7 +73,12 @@ namespace MCTG_Brian.Battle
             return null;
         }
 
-
+        /// <summary>
+        /// Checks if the monster is afraid of the other monster
+        /// </summary>
+        /// <param name="monster1"></param>
+        /// <param name="monster2"></param>
+        /// <returns></returns>
         public static bool IsMonsterAfraid(Card.MonsterType monster1, Card.MonsterType monster2)
         {
             if (monster1 == Card.MonsterType.Goblin && monster2 == Card.MonsterType.Dragon)
@@ -76,7 +88,12 @@ namespace MCTG_Brian.Battle
             return false;
         }
 
-
+        /// <summary>
+        /// Checks if the monster is afraid of the other monster
+        /// </summary>
+        /// <param name="monster1"></param>
+        /// <param name="monster2"></param>
+        /// <returns></returns>
         public static bool IsMonsterControlled(Card.MonsterType monster1, Card.MonsterType monster2)
         {
             if (monster1 == Card.MonsterType.Wizard && monster2 == Card.MonsterType.Orks)
@@ -86,6 +103,12 @@ namespace MCTG_Brian.Battle
             return false;
         }
 
+        /// <summary>
+        /// Checks if the monster is immune
+        /// </summary>
+        /// <param name="monster1"></param>
+        /// <param name="cardType"></param>
+        /// <returns></returns>
         public static bool IsMonsterImmune(Card.MonsterType monster1, Card.CardType cardType)
         {
             if (monster1 == Card.MonsterType.Kraken && cardType == Card.CardType.Spell)
@@ -95,6 +118,12 @@ namespace MCTG_Brian.Battle
             return false;
         }
 
+        /// <summary>
+        /// Check if monster is evading
+        /// </summary>
+        /// <param name="monster1"></param>
+        /// <param name="monster2"></param>
+        /// <returns></returns>
         private static bool IsMonsterEvading(Card.MonsterType monster1, Card.MonsterType monster2)
         {
             if (monster1 == Card.MonsterType.FireElf && monster2 == Card.MonsterType.Dragon)
@@ -104,6 +133,12 @@ namespace MCTG_Brian.Battle
             return false;
         }
 
+        /// <summary>
+        /// Calculate the damage
+        /// </summary>
+        /// <param name="card1"></param>
+        /// <param name="card2"></param>
+        /// <returns></returns>
         private static double GetSpellDamage(Card card1, Card card2)
         {
             if (card1.Element == Card.ElementType.Water && card2.Element == Card.ElementType.Fire)
