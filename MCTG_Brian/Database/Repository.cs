@@ -146,19 +146,6 @@ namespace MCTG_Brian.Database
                 command.ExecuteNonQuery();
             }
         }
-        public void ChangeOwner(Card card, User user)
-        {
-            using (var command = Connection.CreateCommand())
-            {
-
-                command.CommandText = "UPDATE cards SET owner = @Owner WHERE id = @Id";
-                command.Parameters.AddWithValue("Id", card.Id);
-                command.Parameters.AddWithValue("Owner", user.Id);
-                command.ExecuteNonQuery();
-                command.Parameters.Clear();
-      
-            }
-        } //whsl auch weg
         public void pushCards(User user)
         {
             lock(syncPrimitive)
