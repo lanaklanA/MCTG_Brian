@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Dynamic;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
@@ -20,20 +21,33 @@ namespace MCTG_Brian.Server
             Body = body;
         }
 
-        public static string createBody(string? info, Object obj) {
+        public static string createBody(string? info, Object obj, bool proto) {
+
+            if(proto)
+            {
+                StringBuilder sb = new StringBuilder();
+                List<string> list = obj as List<string>;
+
+                foreach (string str in list)
+                {
+                    sb.AppendLine(str);
+                }
+                return $"{info}\n\n{sb}\n";
+            }
+
             var jsonSerializerSettings = new JsonSerializerSettings { Formatting = Formatting.Indented };
-            string hans = JsonConvert.SerializeObject(obj, jsonSerializerSettings);
+            string? output = JsonConvert.SerializeObject(obj, jsonSerializerSettings);
 
+            if (output == "null") output = null;
+            
 
-
-            return $"{info}\n\n{hans}\n";
+            return $"{info}\n\n{output}\n";
 
         }
         public string HttpResponseToString()
         {
             return $"HTTP/1.1 {Status} OK\r\nContent-Type: {ContentType}\r\nContent-Length: {Body.Length}\r\n\r\n{Body}";
         }
-
         public void sendClient(NetworkStream stream, string data)
         {
             byte[] responseBuffer = Encoding.ASCII.GetBytes(data);

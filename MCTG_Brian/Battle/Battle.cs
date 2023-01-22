@@ -1,9 +1,4 @@
 ﻿using MCTG_Brian.Database.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MCTG_Brian.Battle
 {
@@ -27,66 +22,51 @@ namespace MCTG_Brian.Battle
                 Card player1Card = catchedRndCard(player1.Deck);
                 Card player2Card = catchedRndCard(player2.Deck);
 
-                log.addToProtocol($"\n\nRound {rounds}");
+                log.addToProtocol($"\n\n######Round {rounds+1}/100");
 
-                log.addToProtocol($"Card {player1Card.Name} with (ATK: {player1Card.Damage}) against Card {player2Card.Name} with (ATK: {player2Card.Damage})");
-
-                Card loserCard = BattleLogic.Calculate(player1Card, player2Card);
+                log.addToProtocol($"Player ({player1.Username}) -> Card {player1Card.Name} (ATK: {player1Card.Damage})");
+                log.addToProtocol($"Player ({player2.Username}) -> Card {player2Card.Name} (ATK: {player2Card.Damage})\n");
+                
+                Card loserCard = BattleLogic.Calculate(player1Card, player2Card, true);
 
                 if (loserCard == null)
                 {
-                    log.addToProtocol($"Player {player1.Username} draws with Card {player1Card.Name} (ATK {player1Card.Damage}) against Player {player2.Username} Card {player2Card.Name} with (ATK: {player2Card.Damage})\n");
+                    log.addToProtocol($"[{player1.Username}] {player1Card.Type}|{player1Card.Monster}|{player1Card.Element} draws against [{player2.Username}] {player2Card.Type}|{player2Card.Monster}|{player2Card.Element}\n");
                 }
                 else if (loserCard == player1Card)
                 {
-                    log.addToProtocol($"1Player {player2.Username} wins with Card {player2Card.Name} (ATK {player2Card.Damage}) against Player {player1.Username} wins with Card {player1Card.Name} (ATK {player1Card.Damage})\n");
+                    log.addToProtocol($"[{player1.Username}] {player1Card.Type}|{player1Card.Monster}|{player1Card.Element} wins against [{player2.Username}] {player2Card.Type}|{player2Card.Monster}|{player2Card.Element}\n");
                     player1.Deck.Remove(loserCard);
                     player2.Deck.Add(loserCard);
                 }
                 else if (loserCard == player2Card)
                 {
-                    log.addToProtocol($"2Player {player1.Username} wins with Card {player1Card.Name} (ATK {player1Card.Damage}) against Player {player2.Username} wins with Card {player2Card.Name} (ATK {player2Card.Damage})\n"); 
+                    log.addToProtocol($"[{player2.Username}] {player2Card.Type}|{player2Card.Monster}|{player2Card.Element} wins against [{player1.Username}] {player1Card.Type}|{player1Card.Monster}|{player1Card.Element}\n");
                     player2.Deck.Remove(loserCard);
                     player1.Deck.Add(loserCard);
                 }
 
-                log.addToProtocol($"Anzahl deck player1: {player1.Deck.Count()} Anzahl deck player2: {player2.Deck.Count()}");
-                log.addToProtocol($"Deck from Player1 {player1}:");
-                foreach(Card card in player1.Deck)
-                {
-                    log.addToProtocol($"{card.Id} {card.Name} {card.Damage} // {card.Type} {card.Monster} {card.Element}");
-                }
-
-                log.addToProtocol($"\nDeck from Player2 {player2}:");
-                foreach (Card card in player2.Deck)
-                {
-                    log.addToProtocol($"{card.Id} {card.Name} {card.Damage} // {card.Type} {card.Monster} {card.Element}");
-                }
-                log.addToProtocol($"\n\n");
-
-
                 if (((player1.Deck.Count() + player2.Deck.Count()) < 1) || rounds >= 99)
                 {
-                    log.addToProtocol($"{player1.Username} drawed against the other Player {player2.Username}");
+                    log.addToProtocol($"\n\nPlayer {player1.Username} drawed against the Player {player2.Username}");
                     log.isDraw = true;
                     break;
                 }
                 else if (player1.Deck.Count() < 1)
                 {
-                    log.addToProtocol($"{player2.Username} won against the other Player {player1.Username}");
+                    log.addToProtocol($"{player2.Username} won against the Player {player1.Username}");
                     log.classifyUsers(player2, player1);
                     break;
                 }
                 else if (player2.Deck.Count() < 1)
                 {
-                    log.addToProtocol($"{player1.Username} won against the other Player {player2.Username}");
+                    log.addToProtocol($"{player1.Username} won against the Player {player2.Username}");
                     log.classifyUsers(player1, player2);
                     break;
                 }
             }
 
-
-            log.addToProtocol($"Battle ended");
+            log.addToProtocol($"\nBattle ended");
             
             return log;  
         }

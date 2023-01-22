@@ -1,11 +1,27 @@
 ﻿using MCTG_Brian.Database.Models;
+using System.Diagnostics;
 
 namespace MCTG_Brian.Battle
 {
     public static class BattleLogic
     {
-        public static Card? Calculate(Card card1, Card card2)
+        public static Card? Calculate(Card card1, Card card2, bool testing = false)
         {
+            if(testing)
+            {
+                card1.Damage = 0;
+
+                if (card1.Damage < card2.Damage)
+                {
+                    return card1;
+                }
+                else if (card1.Damage > card2.Damage)
+                {
+                    return card2;
+                }
+                return null;
+            }
+
             if (card1.Type == Card.CardType.Monster && card2.Type == Card.CardType.Monster)
             {
                 if (IsMonsterAfraid(card1.Monster, card2.Monster))
@@ -111,22 +127,6 @@ namespace MCTG_Brian.Battle
                 return 0;
             }
         }
-
-
-
     }
 }
 
-//public static Card Calculate(Card card1, Card card2)
-//{
-
-//    if (card1.Damage < card2.Damage)
-//    {
-//        return card1;
-//    }
-//    else if (card1.Damage > card2.Damage)
-//    {
-//        return card2;
-//    }
-//    return null;
-//}

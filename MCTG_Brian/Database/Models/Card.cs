@@ -45,6 +45,13 @@ namespace MCTG_Brian.Database.Models
             Monster = DetermineMonsterType(name);
         }
 
+        public static void clearDeck(User user)
+        {
+            List<Card> cardsToMove = user.Deck.GetRange(0, user.Deck.Count);
+            user.Deck.Clear();
+            user.Stack.AddRange(cardsToMove);
+        }
+
         public CardType DetermineCardType(string name)
         {
             if (name.Contains("Spell"))

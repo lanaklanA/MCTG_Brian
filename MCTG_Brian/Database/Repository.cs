@@ -6,11 +6,9 @@ using NpgsqlTypes;
 
 namespace MCTG_Brian.Database
 {
-    //TODO CHANGE LOCK TO syncPrimitive
-    //ALLES zu elm ändern!
     public abstract class Repository<T>
     {
-        public static NpgsqlConnection? Connection { get; private set; }         // die Datenbankverbindung
+        public static NpgsqlConnection? Connection { get; private set; }       
         private const string _CONNECTION_STRING = "Host = localhost; Username = postgres; Password = qwerqwer; Database = postgres";
         
         public Repository() 
@@ -19,17 +17,20 @@ namespace MCTG_Brian.Database
             Connection.Open();
         }
 
-        public abstract bool Add(T elm);                                        // Add-Methode 
-        public abstract void Update(T elm);                                     // Update-Methode
-        public abstract T ByUniq(string Username);                           // Delete-Methode
+        public abstract bool Add(T elm);                                         
+        public abstract void Update(T elm);                                     
+        public abstract T ByUniq(string Username);                           
     }
 
+    /// <summary>
+    /// The UserRepository class provides CRUD operations and statistics update for User entities, using a thread-safe implementation.
+    /// </summary>
     public class UserRepository : Repository<User>
     {
-        private object lockThread = new object(); // TODO: brauch ich das? testen und weggeben
+        private object syncPrimitive = new object(); 
         public void UpdateStats(User user)
         {
-            lock(lockThread)
+            lock(syncPrimitive)
             {
 
                 using (var command = Connection.CreateCommand())
@@ -79,13 +80,13 @@ namespace MCTG_Brian.Database
             }
         }
         public override User? ByUniq(string Username)
-        { //TODO: VLLT 3 seperate abfragen, und jede einzelene befüllt unterobjekt des users (erste abfrage den user, zweite abfrage die stats und dritte abfrage den stack)
+        { 
             using (var command = Connection.CreateCommand())
             {
                 command.CommandText = "SELECT users.id, users.name, users.password, users.coins, users.bio, users.image, stats.id, stats.elo, stats.wins, stats.loses, stats.draws FROM users JOIN stats ON stats.userid = users.id WHERE users.name = @Name";
                 command.Parameters.AddWithValue("Name", Username);
 
-                lock (lockThread)
+                lock (syncPrimitive)
                 {
                     using (var reader = command.ExecuteReader())
                     {
@@ -123,12 +124,19 @@ namespace MCTG_Brian.Database
             }
         }
     }
-    public class CardRepository : Repository<Card> // vllt zu tuple<user, card> umändenr
-    { 
+
+    /// <summary>
+    /// The CardRepository class provides CRUD operations and owner management for Card entities, using a thread-safe implementation.
+    /// </summary>
+    public class CardRepository : Repository<Card> 
+    {
+        private object syncPrimitive = new object(); 
+
         public void Add(User user, Card card)
         {
             using (var command = Connection.CreateCommand())
             {
+
                 command.CommandText = "INSERT INTO cards (id, owner, name, damage) VALUES (@Id, @Owner, @Name, @Damage)";
                 command.Parameters.AddWithValue("Id", card.Id);
                 command.Parameters.AddWithValue("Owner", user.Id);
@@ -136,37 +144,6 @@ namespace MCTG_Brian.Database
                 command.Parameters.AddWithValue("Damage", card.Damage);
                 command.Prepare();
                 command.ExecuteNonQuery();
-            }
-        }
-        public bool ChangeDepot(List<Guid> cardsId, User user)
-        {
-            using (var command = Connection.CreateCommand())
-            {
-                long rowAffected = 0;
-                foreach(Guid cardId in cardsId)
-                {
-                    command.CommandText = "SELECT COUNT(ID) FROM cards WHERE id = @Id AND owner = @Owner AND depot = 'stack'";
-                    command.Parameters.AddWithValue("Id", cardId);
-                    command.Parameters.AddWithValue("Owner", user.Id);
-                    rowAffected += (long)command.ExecuteScalar();
-                    command.Parameters.Clear();
-                }
-
-                if(rowAffected != 4)
-                {
-                    return false;
-                }
-
-                foreach (Guid cardId in cardsId)
-                { 
-                    command.CommandText = "UPDATE cards SET depot = CASE depot WHEN 'stack' THEN 'deck' ELSE 'stack' END WHERE id = @Id AND owner = @Owner";
-                    command.Parameters.AddWithValue("Id", cardId);
-                    command.Parameters.AddWithValue("Owner", user.Id);
-                    command.ExecuteNonQuery();
-                    command.Parameters.Clear();
-                }
-
-                return true;
             }
         }
         public void ChangeOwner(Card card, User user)
@@ -181,23 +158,36 @@ namespace MCTG_Brian.Database
                 command.Parameters.Clear();
       
             }
+        } //whsl auch weg
+        public void pushCards(User user)
+        {
+            lock(syncPrimitive)
+            {
+
+                using (var command = Connection.CreateCommand())
+            {
+                foreach(Card deckCard in user.Deck)
+                {
+                    command.CommandText = "UPDATE cards SET owner = @Userid, damage = @Damage, depot = 'deck' WHERE id = @Id";
+                    command.Parameters.AddWithValue("Userid", user.Id);
+                    command.Parameters.AddWithValue("Damage", deckCard.Damage);
+                    command.Parameters.AddWithValue("Id", deckCard.Id);
+                    command.ExecuteNonQuery();
+                    command.Parameters.Clear();
+                }
+
+                foreach (Card stackCard in user.Stack)
+                {
+                    command.CommandText = "UPDATE cards SET owner = @Userid, damage = @Damage, depot = 'stack' WHERE id = @Id";
+                    command.Parameters.AddWithValue("Userid", user.Id);
+                    command.Parameters.AddWithValue("Damage", stackCard.Damage);
+                    command.Parameters.AddWithValue("Id", stackCard.Id);
+                    command.ExecuteNonQuery();
+                    command.Parameters.Clear();
+                }
+            }
+            }
         }
-
-        //updateDeck
-        //updateStack
-        //oder gleich updateCard(, 'stack'||'deck')
-
-        /*
-         was ich möchte ist, dass die karten vom user gleich auf mit einem befehl in der db dann sind
-        heißt z.b. cardRepo.trasnfer(user.deck) oder cardRepo.trandsfer(user.stack)
-        dann muss ich nicht mehr beides aktuell halten sondern nur an meine arbeiten und dann "pushen"
-        oder ich mache gleich das ich den user übergeben, weil dann habe ich gleich stack und deck
-        dann sowas wie update( depot = 'je nachdem wo es war' und owner = userid where id = cardid)
-        
-        die methode heißt dann pushCards
-
-         */
-
         public List<Card> GetCards(Guid userId, bool obj = false)
         {
             var cards = new List<Card>();
@@ -264,6 +254,10 @@ namespace MCTG_Brian.Database
             }
         }
     }
+
+    /// <summary>
+    /// A repository for managing and querying card packs stored in a database. Includes methods for adding, updating, and deleting packs, as well as retrieving a random pack and searching for a specific pack by its unique ID.
+    /// </summary>
     public class PackRepository : Repository<List<Card>>
     {
         public override bool Add(List<Card> pack)
@@ -376,6 +370,10 @@ namespace MCTG_Brian.Database
             }
         }
     }
+
+    /// <summary>
+    /// The TradeRepository class is a repository that handles the CRUD operations for the trades. It has methods for adding a new trade, deleting a trade, updating a trade, getting a trade by its unique ID, and getting all trades.
+    /// </summary>
     public class TradeRepository : Repository<Trade> 
     {
         public override bool Add(Trade elm)
@@ -442,7 +440,7 @@ namespace MCTG_Brian.Database
                 return null;
             }
         }
-        public List<Trade> GetAll()
+        public List<Trade>? GetAll()
         {
             List<Trade> trades = new List<Trade>();
             using (var command = Connection.CreateCommand())
@@ -463,7 +461,7 @@ namespace MCTG_Brian.Database
                     }
                 }
             }
-            return trades;
+            return trades.Count > 0 ? trades : null;
         }
     }
 }

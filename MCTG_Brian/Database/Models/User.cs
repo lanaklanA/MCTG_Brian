@@ -21,5 +21,7 @@ namespace MCTG_Brian.Database.Models
         public List<Card>? Stack { get; set; }
         public List<Card>? Deck { get; set; }
 
+
+
     }
 }
