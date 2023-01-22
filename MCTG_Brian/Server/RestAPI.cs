@@ -5,6 +5,7 @@ using MCTG_Brian.Database.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Net.Sockets;
+using System.Text;
 
 namespace MCTG_Brian.Server
 {
@@ -26,6 +27,7 @@ namespace MCTG_Brian.Server
         {
             new Tuple<string, string>("GET", "/cards"),
             new Tuple<string, string>("GET", "/deck"),
+            new Tuple<string, string>("GET", "/deck?format=plain"),
             new Tuple<string, string>("GET", "/stats"),
             new Tuple<string, string>("GET", "/score"),
             new Tuple<string, string>("GET", "/tradings"), 
@@ -92,16 +94,23 @@ namespace MCTG_Brian.Server
                     if (request.Path.StartsWith("/deck"))
                     {
                         List<Card> tempDeck = Auth.getUser(request.getToken()).Deck;
-                        
+
                         if (tempDeck.Count() <= 0)
                         {
                             SendMessage(stream, 202, $"The requst was fine, but the deck of user ({Auth.getUser(request.getToken()).Username}) is empty");
                             return;
                         }
 
-                        if(request.HasQueryParameter("format", "plain"))
+                        if (request.HasQueryParameter("format", "plain"))
                         { 
-                            SendMessage(stream, 200, $"The deck of user ({Auth.getUser(request.getToken()).Username}) has cards, the response contains these");
+                            StringBuilder sb = new StringBuilder();
+
+                            foreach(Card card in tempDeck)
+                            {
+                                sb.Append($"ID: {card.Id} Name: {card.Name} Damage {card.Damage} Type: {card.Type} Element: {card.Element}  Monster: {card.Monster}\n");
+                            }
+                            
+                            SendMessage(stream, 200, $"{sb}\n");
                             return;
                         }
 
