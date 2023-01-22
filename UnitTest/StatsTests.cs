@@ -21,8 +21,8 @@ namespace UnitTest.MODEL
             stats.updateWinStats();
 
             // Assert
-            Assert.AreEqual(110, stats.Elo);
-            Assert.AreEqual(1, stats.Wins);
+            Assert.That(stats.Elo, Is.EqualTo(110));
+            Assert.That(stats.Wins, Is.EqualTo(1));
         }
 
         [Test]

@@ -56,7 +56,7 @@ namespace UnitTest.AUTH
             _testUser.Coins = 200;
             Auth.updateUser(_testToken, _testUser);
             var result = Auth.getUser(_testToken);
-            Assert.AreEqual(200, result.Coins);
+            Assert.That(result.Coins, Is.EqualTo(200));
         }
 
         [Test]

@@ -44,7 +44,8 @@ namespace MCTG_Brian.Authentication
 
         public static string getName(RequestContainer request)
         {
-            return (string)request.Body[0]["Username"];
+            var name = request.Body[0]["Username"] ?? "";
+            return name.ToString();
         }
 
         public static bool isAdmin(string token)

@@ -12,15 +12,14 @@ namespace MCTG_Brian.Database.Models
     public class User
     {
         public Guid Id { get; set; }
-        public string Username { get; set; }
-        public string Password { get; set; }
-        public int Coins { get; set; }
+        public string? Username { get; set; }
+        public string? Password { get; set; }
+        public int? Coins { get; set; }
         public string? Bio { get; set; }
         public string? Image { get; set; }
-        public Stats Stats { get; set; }
-        public List<Card> Stack { get; set; }
-        public List<Card> Deck { get; set; }
+        public Stats? Stats { get; set; }
+        public List<Card>? Stack { get; set; }
+        public List<Card>? Deck { get; set; }
 
-        //public User() { }
     }
 }

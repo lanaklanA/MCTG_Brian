@@ -4,6 +4,7 @@ using MCTG_Brian.Database;
 using MCTG_Brian.Database.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Npgsql.Replication.PgOutput.Messages;
 using System;
 using System.Net.Sockets;
 using System.Text;
@@ -12,10 +13,10 @@ namespace MCTG_Brian.Server
 {
     public static class RestAPI
     {
-        public static UserRepository  userRepo = new UserRepository();
-        public static CardRepository  cardRepo = new CardRepository();
-        public static PackRepository  packRepo = new PackRepository();
-        public static TradeRepository tradeRepo = new TradeRepository();
+        private static readonly UserRepository  userRepo = new UserRepository();
+        private static readonly CardRepository cardRepo = new CardRepository();
+        private static readonly PackRepository packRepo = new PackRepository();
+        private static readonly TradeRepository tradeRepo = new TradeRepository();
 
         //TODO: ÜNBEALL BEI DEN METHODEN COMMENDS MACHEN MIT -> /// <-
         //TODO: ÜBERLEGEN ÜBERALL EINEN TEMPUSER ZUERSTELLEN! asntellen von dem ganzen auth.getUser(request.Token)
@@ -62,23 +63,23 @@ namespace MCTG_Brian.Server
             if (notAuthList.Contains(new Tuple<string, string>(request.Method, request.Path))) { }
             else if (AdminList.Contains(new Tuple<string, string>(request.Method, request.Path)) && (!Auth.isAdmin(request.getToken())))
             {
-                SendMessage(stream, "Du musst Admin sein!");
+                SendMessage(stream, 403, "Provided user is not an admin");
                 return;
             }
             else if (AuthList.Contains(new Tuple<string, string>(request.Method, request.Path)) && Auth.isUserLoggedIn(request.getToken())) { }
             else if (AuthList.Contains(new Tuple<string, string>(request.Method, request.Path)) && (request.getToken() == null))
             {
-                SendMessage(stream, "Token is missing");
+                SendMessage(stream, 401, "Access token is missing or invalid");
                 return;
             }
             else if (AuthList.Contains(new Tuple<string, string>(request.Method, request.Path)))
             {
-                SendMessage(stream, "User is not logged in");
+                SendMessage(stream, 401, "Authorization is needed for this action");
                 return;
             }
             else
             {
-                SendMessage(stream, "Path not found");
+                SendMessage(stream, 404, "Path not found");
                 return;
             }
 
@@ -86,68 +87,71 @@ namespace MCTG_Brian.Server
             {
                 case "GET":
 
-                    if (request.Path.EndsWith("/deck"))
+                    if (request.Path.StartsWith("/deck"))
                     {
-                        if(Auth.getUser(request.getToken()).Deck.Count() <= 0)
+                        List<Card> tempDeck = Auth.getUser(request.getToken()).Deck;
+                        
+                        if (tempDeck.Count() <= 0)
                         {
-                            SendMessage(stream, $"Das Deck von User {Auth.getUser(request.getToken()).Username} ist leer");
+                            SendMessage(stream, 202, $"The requst was fine, but the deck of user ({Auth.getUser(request.getToken()).Username}) is empty");
                             return;
                         }
 
-                        foreach (Card card in Auth.getUser(request.getToken()).Deck)
-                        {
-                            Console.WriteLine($"{card.Id} {card.Name} {card.Damage}");
+                        if(request.HasQueryParameter("format", "plain"))
+                        { 
+                            SendMessage(stream, 200, $"The deck of user ({Auth.getUser(request.getToken()).Username}) has cards, the response contains these");
+                            return;
                         }
 
-                        SendMessage(stream, $"KartenDeck wird vom Player {Auth.getUser(request.getToken()).Username} ausgegeben!");
-                    }
- 
-                    if (request.Path.StartsWith("/deck") && request.HasQueryParameter("format", "plain"))
-                    {
-                        Console.WriteLine("YEAH ICH BIN DRINNEN IM FORMAR");
-                    }
-                    
+                        SendMessage(stream, 200, $"The deck of user ({Auth.getUser(request.getToken()).Username}) has cards, the response contains these", tempDeck);
+                    }/**/
+
                     if (request.Path.Contains("/users/"))
                     {
                         string pathUsername = request.Path.Replace("/users/", "");
 
                         if (Auth.getUser(request.getToken()).Username != pathUsername)
                         {
-                            SendMessage(stream, $"Keine Berechtiung Benutzer {pathUsername} anzuzeigen!");
+                            //SendMessage(stream, $"Keine Berechtiung Benutzer {pathUsername} anzuzeigen!");
                             return;
                         }
                       
                         User tempUser = Auth.getUser(request.getToken()); // INKONSITENT
-                        SendMessage(stream, $"Benutzerausgabe: {tempUser.Id} {tempUser.Username} {tempUser.Coins} {tempUser.Bio} {tempUser.Image}");
+                        //SendMessage(stream, $"Benutzerausgabe: {tempUser.Id} {tempUser.Username} {tempUser.Coins} {tempUser.Bio} {tempUser.Image}");
      
                     }
 
                     if (request.Path.EndsWith("/cards"))
                     {
-                        foreach (Card card in Auth.getUser(request.getToken()).Stack)
+                        List<Card> tempStack = Auth.getUser(request.getToken()).Stack;
+
+                        if(tempStack.Count() <= 0)
                         {
-                            Console.WriteLine($"{card.Id} {card.Name} {card.Damage}");
+                            SendMessage(stream, 202, $"The request was fine, but the user ({Auth.getUser(request.getToken()).Username}) doesn't have any cards");
+                            return;
                         }
 
-                        SendMessage(stream, $"KartenStack wird vom Player {Auth.getUser(request.getToken()).Username} ausgegeben!");
-                    }
+                        SendMessage(stream, 200, $"The user has cards, the response contains these", tempStack);
+                    }/**/
 
                     if (request.Path.EndsWith("/stats"))
                     {
                         User tempUser = Auth.getUser(request.getToken());
 
-                        SendMessage(stream, $"Id: {tempUser.Id} Name: {tempUser.Username} Pw: {tempUser.Password} Coins: {tempUser.Coins} Bio: {tempUser.Bio} Image: {tempUser.Image} Elo: {tempUser.Stats.Elo} Wins: {tempUser.Stats.Wins} Draws: {tempUser.Stats.Draws}");
-                    }
+                        SendMessage(stream, 200, "The stats could be retrieved succesfully", tempUser.Stats);
+                    }/**/
                     
                     if (request.Path.EndsWith("/score"))
                     {
-                        foreach(var tempUser in Auth.getAll())
+                        JArray scoreboard = new JArray();
+
+                        foreach (var tempUser in Auth.getAll())
                         {
-                            Console.WriteLine($"Id: {tempUser.Id} Name: {tempUser.Username} Pw: {tempUser.Password} Coins: {tempUser.Coins} Bio: {tempUser.Bio} Image: {tempUser.Image} Elo: {tempUser.Stats.Elo} Wins: {tempUser.Stats.Wins} Draws: {tempUser.Stats.Draws}");
+                            scoreboard.Add($"Id: {tempUser.Id} Name: {tempUser.Username} Elo: {tempUser.Stats.Elo}");
                         }
 
-                        SendMessage(stream, "Scoreboard wurde geprinted");
-                    }
+                        SendMessage(stream, 200, "The scoreboard could be retrieved successfully", scoreboard);
+                    }/**/
 
                     if (request.Path.EndsWith("/tradings"))
                     {
@@ -158,7 +162,7 @@ namespace MCTG_Brian.Server
                             Console.WriteLine($"{hansi.Id} {hansi.CardId} {hansi.UserId} {hansi.Details["Type"]} {hansi.Details["MinimumDamage"]}  ");
                         }
 
-                        SendMessage(stream, "Liste ausgegeben");
+                        //SendMessage(stream, "Liste ausgegeben");
 
                     }
 
@@ -172,7 +176,7 @@ namespace MCTG_Brian.Server
 
                         if(!Lobby.joinLobby(tempUser))
                         {
-                            SendMessage(stream, "Die Decks sind nicht gefüllt");
+                            SendMessage(stream, 200, "Die Decks sind nicht gefüllt");
                             return;
                         }
                         
@@ -187,7 +191,7 @@ namespace MCTG_Brian.Server
                         if (tempUser == Lobby.log.winner)
                         {
                             tempUser.Stats.updateWinStats();
-                            SendMessage(stream, "Du hast gewonnen");
+                            SendMessage(stream, 200, "Du hast gewonnen");
                         }
                         else if (tempUser == Lobby.log.loser)
                         {
@@ -196,44 +200,37 @@ namespace MCTG_Brian.Server
                             {
                                 cardRepo.ChangeOwner(card, Lobby.log.winner);
                             }
-                            SendMessage(stream, "Du hast verloren");
+                            SendMessage(stream, 200, "Du hast verloren");
                         }
                         else
                         {
                             tempUser.Stats.updateDrawStats();
-                            SendMessage(stream, "Unentschieden");
+                            SendMessage(stream, 200, "Unentschieden");
                         }
 
 
                         Console.WriteLine($"Id: {tempUser.Id} Name: {tempUser.Username} Pw: {tempUser.Password} Coins: {tempUser.Coins} Bio: {tempUser.Bio} Image: {tempUser.Image} Elo: {tempUser.Stats.Elo} Wins: {tempUser.Stats.Wins} Draws: {tempUser.Stats.Draws}");
 
                         // Statsupdate DB
-                        //userRepo.UpdateStats(tempUser);
-                        //cardRepo.ChangeDepot(tempUser.Deck.Select(c => c.Id).ToList(), tempUser);
+                        userRepo.UpdateStats(tempUser);
+                        cardRepo.ChangeDepot(tempUser.Deck.Select(c => c.Id).ToList(), tempUser);
 
 
 
-                        //tempUser.Stack = cardRepo.GetCards(tempUser.Id);
-                        //tempUser.Deck = cardRepo.GetCards(tempUser.Id, true);
+                        tempUser.Stack = cardRepo.GetCards(tempUser.Id);
+                        tempUser.Deck = cardRepo.GetCards(tempUser.Id, true);
                         //foreach (Card card in tempUser.Deck)
                         //{
                         //    tempUser.Deck.Remove(card);
                         //    tempUser.Stack.Add(card);
                         //}
-                        //Auth.updateUser(request.getToken(), tempUser);
+                        Auth.updateUser(request.getToken(), tempUser);
 
 
                         User tempUser1 = Auth.getUser(request.getToken());
                         Console.WriteLine($"Id: {tempUser1.Id} Name: {tempUser1.Username} Pw: {tempUser1.Password} Coins: {tempUser1.Coins} Bio: {tempUser1.Bio} Image: {tempUser1.Image} Elo: {tempUser1.Stats.Elo} Wins: {tempUser1.Stats.Wins} Draws: {tempUser1.Stats.Draws}");
 
-                        // Change Card on DB
-
-                        // Change Card 
-           
-                        // TODO: DeckDelete from Table
-                        // TODO: UpdateDeck at both players 
-
-                        //SendMessage(stream, "Battle really done");
+          
                     }
 
                     if (request.Path.EndsWith("/users"))
@@ -242,42 +239,39 @@ namespace MCTG_Brian.Server
 
                         if (tempUser != null)
                         {
-                            SendMessage(stream, $"Player mit Namen {tempUser.Username} existiert schon");
+                            SendMessage(stream, 409, $"User with same username ({tempUser.Username}) already registered", tempUser);
                             return;
                         }
 
                         tempUser = JsonConvert.DeserializeObject<User>(request.Body[0].ToString());
                         userRepo.Add(tempUser);
 
-                        SendMessage(stream, $"Player mit Credential {tempUser.Username} gespeichert");
+                        SendMessage(stream, 201, $"User successfully created");
 
-                    }
+                    }/**/
 
                     if (request.Path.EndsWith("/sessions"))
                     {
                         User toCheck = JsonConvert.DeserializeObject<User>(request.Body[0].ToString());
-
                         User tempUser = userRepo.ByUniq(Auth.getName(request));
-
 
                         if (tempUser == null || (tempUser.Username != toCheck.Username || tempUser.Password != toCheck.Password))
                         {
-                            SendMessage(stream, "Username oder Passwort ist nicht korrekt");
+                            SendMessage(stream, 401, "Invalid username/password provided");
                             return;
-
                         }
 
                         if (!Auth.loginUser(tempUser))
                         {
-                            SendMessage(stream, $"User {tempUser.Username} ist schon eingeloggt");
+                            SendMessage(stream, 409, $"User ({tempUser.Username}) already logged in, no further actions", tempUser);
                             return;
                         }
 
                         tempUser.Stack = cardRepo.GetCards(tempUser.Id);
                         tempUser.Deck = cardRepo.GetCards(tempUser.Id, true);
 
-                        SendMessage(stream, $"User {tempUser.Username} wurde eingeloggt");
-                    }
+                        SendMessage(stream, 200, $"User login successful", tempUser);
+                    }/**/
 
                     if (request.Path.StartsWith("/packages"))
                     {
@@ -285,30 +279,34 @@ namespace MCTG_Brian.Server
 
                         if (newPack.Count() != 5)
                         {
-                            SendMessage(stream, "Das Packages ist nicht Konform!");
+                            SendMessage(stream, 400, $"The provided packages did not include the required amount of cards ({newPack.Count()}/5)");
                             return;
                         }
 
-                        packRepo.Add(newPack);
-                        SendMessage(stream, "Package mit 5 Karten sind nun im Store verfügbar!");
-                    }
+                        if(!packRepo.Add(newPack)) 
+                        {
+                            SendMessage(stream, 409, "At least one card in the packages already exists");
+                            return;
+                        }
+                        
+                        SendMessage(stream, 200, "Packages and cards succesfully created");
+                    }/**/
 
                     if (request.Path.EndsWith("/transactions/packages"))
-                    {
+                    { 
                         Tuple<Guid, List<Card>> package = packRepo.GetRandPackage();
 
                         if (package == null)
                         {
-                            SendMessage(stream, "Es sind keine Packages im Store vorhanden!");
+                            SendMessage(stream, 404, "No card package available for buying");
                             return;
                         }
 
                         if (Auth.getUser(request.getToken()).Coins < 5)
                         {
-                            SendMessage(stream, $"Player {Auth.getUser(request.getToken()).Username} hat weniger als 5 Coins!");
+                            SendMessage(stream, 403, $"User {Auth.getUser(request.getToken()).Username} has not enough money ({Auth.getUser(request.getToken()).Coins}) for buying a card package");
                             return;
                         }
-
                         packRepo.Delete(package.Item1);
 
                         foreach (Card card in package.Item2)
@@ -320,8 +318,8 @@ namespace MCTG_Brian.Server
                         Auth.getUser(request.getToken()).Coins -= 5;
                         userRepo.Update(Auth.getUser(request.getToken()));
 
-                        SendMessage(stream, $"Packages mit ID ({package.Item1}) wurde User gegeben {Auth.getUser(request.getToken()).Username}!");
-                    }
+                        SendMessage(stream, 200, $"A package ({package.Item1}) has been succesfully bought for User {Auth.getUser(request.getToken()).Username}");
+                    }/**/
 
                     if (request.Path.Contains("/tradings/"))
                     {
@@ -329,7 +327,7 @@ namespace MCTG_Brian.Server
                        
                         if(checkTrade == null)
                         {
-                            SendMessage(stream, "Kein Trade verfügbar!");
+                            SendMessage(stream, 200, "Kein Trade verfügbar!");
                             return;
                         }
 
@@ -341,19 +339,19 @@ namespace MCTG_Brian.Server
 
                         if(offerCard == null || tradeCard == null)
                         {
-                            SendMessage(stream, "Mind. eine Karte befindet sich nicht in einem Stack");
+                            SendMessage(stream, 200, "Mind. eine Karte befindet sich nicht in einem Stack");
                             return;
                         }
 
                         if(offerCard.Damage < double.Parse(checkTrade.Details["MinimumDamage"].ToString()))
                         {
-                            SendMessage(stream, "Die Karte hat nicht den gewünschten Damage");
+                            //SendMessage(stream, "Die Karte hat nicht den gewünschten Damage");
                             return;
                         }
 
                         if   (!string.Equals(offerCard.Type.ToString(), checkTrade.Details["Type"].ToString(), StringComparison.OrdinalIgnoreCase)) 
                         {
-                            SendMessage(stream, "Die Karte hat nicht den passende Type");
+                            SendMessage(stream, 200, "Die Karte hat nicht den passende Type");
                             return;
                         }
 
@@ -367,7 +365,7 @@ namespace MCTG_Brian.Server
 
                         tradeRepo.Delete(checkTrade.Id);
 
-                        SendMessage(stream, "Trade findet statt");
+                        SendMessage(stream, 200, "Trade findet statt");
                     }
 
                     if (request.Path.EndsWith("/tradings"))
@@ -396,7 +394,7 @@ namespace MCTG_Brian.Server
                         Console.WriteLine($"{hansi.Id} {hansi.CardId} {hansi.UserId} {hansi.Details["Type"]} {hansi.Details["MinimumDamage"]}  ");
 
 
-                        SendMessage(stream, "OK");
+                        SendMessage(stream, 200, "OK");
                     }
 
                     break;
@@ -409,22 +407,25 @@ namespace MCTG_Brian.Server
 
                         if (deckIds.Count() != 4)
                         {
-                            SendMessage(stream, $"Das gegeben Deck beinhaltet {deckIds.Count()} sollte aber 4 haben!");
+                            SendMessage(stream, 400, $"The provided deck did not include the required amount of cards ({deckIds.Count()}/4)");
                             return;
                         }
 
+                        //VLLT DANN NOCH EINE STATIC USER.removeDeckToStack
+
+                        //foreach jede karte durch, zuerst alle 4 karten durch, wenn ich eins nicht finde dann huchit
+                        //wenn alles gefunden wurde, dann diekarte vom stack in den deck
                         if (cardRepo.ChangeDepot(deckIds, Auth.getUser(request.getToken())) == false)
                         {
-                            SendMessage(stream, "Mind. eine Karte ist nicht in deinem Stack!");
+                            SendMessage(stream, 403, "At least one of the provided cards does not belong to the user or is not available");
                             return;
                         }
-
-                        SendMessage(stream, "Deck geupdatet");
-
 
                         Auth.getUser(request.getToken()).Stack = cardRepo.GetCards(Auth.getUser(request.getToken()).Id);
                         Auth.getUser(request.getToken()).Deck = cardRepo.GetCards(Auth.getUser(request.getToken()).Id, true);
-                    }
+
+                        SendMessage(stream, 200, "The deck has been successfully configured");
+                    }/**/
 
                     if (request.Path.Contains("/users/"))
                     {
@@ -445,41 +446,41 @@ namespace MCTG_Brian.Server
                         Auth.updateUser(request.getToken(), updateUser);
                         userRepo.Update(updateUser);
 
-                        SendMessage(stream, $"Neuer User mit {updateUser.Id} {updateUser.Password} {updateUser.Username} {updateUser.Coins} {updateUser.Image} {updateUser.Bio}");
+                        //SendMessage(stream, $"Neuer User mit {updateUser.Id} {updateUser.Password} {updateUser.Username} {updateUser.Coins} {updateUser.Image} {updateUser.Bio}");
                     }
 
                     break;
+
+
+                /*
+                 monster fusion funktion. zwei carden werden gegeben, die schwächere wird entfernt und die stärke deren wird stärker von 
+                (Damage Card 1 * 1.1 + Damage Card 2 * 1.1) / 2
+                (Damage Card 1 + Damage Card 2) / 2 + (Damage Card 1 + Damage Card 2) / 10
+                 */
+
 
                 case "DELETE":
 
                     if (request.Path.Contains("/tradings/"))
                     {
                         tradeRepo.Delete(Guid.Parse(request.Path.Replace("/tradings/", "")));
-                        SendMessage(stream, "Trade wurde gelöscht");
+                        SendMessage(stream, 200, "Trade wurde gelöscht");
                     }
 
                     break;
             }
         }
 
-        public static void SendMessage(NetworkStream stream, string body)
+        public static void SendMessage(NetworkStream stream, int statusCode, string? info = null, Object obj = null)
         {
-            Console.WriteLine($"Clientausgabe: {body}");
+            string fullResponse = ResponseContainer.createBody(info, obj);
+            Console.WriteLine($"Ausgabe: {info}");
 
-
-            int statusCode = 200;
-            ResponseContainer response = new ResponseContainer(statusCode, "application/json", body);
-
+            ResponseContainer response = new ResponseContainer(statusCode, obj != null ? "application/json" : "text/plain", fullResponse);
             string responseString = response.HttpResponseToString();
-            byte[] responseBuffer = Encoding.ASCII.GetBytes(responseString);
-            stream.Write(responseBuffer, 0, responseBuffer.Length);
 
-            stream.Close();
+            response.sendClient(stream, responseString);
+            
         }
     }
 }
-
-
-
-//Console.WriteLine($"{checkTrade.Id} {checkTrade.CardId} {checkTrade.UserId} {checkTrade.Details["Type"]} {checkTrade.Details["MinimumDamage"]}  ");
-//Console.WriteLine($"Card {card.Id} {card.Name} {card.Damage}  {card.Type}");

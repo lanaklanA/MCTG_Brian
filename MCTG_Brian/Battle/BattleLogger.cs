@@ -6,8 +6,8 @@ namespace MCTG_Brian.Battle
     {
         public List<string> protocol = new();
         public bool isDraw = false;
-        public User winner { get; set; }
-        public User loser { get; set; }
+        public User? winner { get; set; }
+        public User? loser { get; set; }
 
         public void addToProtocol(string message)
         {

@@ -19,7 +19,7 @@ namespace MCTG_Brian.Database
             Connection.Open();
         }
 
-        public abstract void Add(T elm);                                        // Add-Methode 
+        public abstract bool Add(T elm);                                        // Add-Methode 
         public abstract void Update(T elm);                                     // Update-Methode
         public abstract T ByUniq(string Username);                           // Delete-Methode
     }
@@ -46,7 +46,7 @@ namespace MCTG_Brian.Database
                 }
             }
         }
-        public override void Add(User user)
+        public override bool Add(User user)
         {
             using (var command = Connection.CreateCommand())
             {
@@ -60,6 +60,7 @@ namespace MCTG_Brian.Database
                 command.Prepare();
                 command.ExecuteNonQuery();
             }
+            return true;
         }
         public override void Update(User user)
         {
@@ -149,11 +150,12 @@ namespace MCTG_Brian.Database
                     command.Parameters.AddWithValue("Owner", user.Id);
                     rowAffected += (long)command.ExecuteScalar();
                     command.Parameters.Clear();
-                    //Console.WriteLine($"rowaffected: {rowAffected}");
                 }
 
-                //if (rowAffected != 4) return false;
-                //    Console.WriteLine($"wird geupadeted");
+                if(rowAffected != 4)
+                {
+                    return false;
+                }
 
                 foreach (Guid cardId in cardsId)
                 { 
@@ -180,6 +182,22 @@ namespace MCTG_Brian.Database
       
             }
         }
+
+        //updateDeck
+        //updateStack
+        //oder gleich updateCard(, 'stack'||'deck')
+
+        /*
+         was ich möchte ist, dass die karten vom user gleich auf mit einem befehl in der db dann sind
+        heißt z.b. cardRepo.trasnfer(user.deck) oder cardRepo.trandsfer(user.stack)
+        dann muss ich nicht mehr beides aktuell halten sondern nur an meine arbeiten und dann "pushen"
+        oder ich mache gleich das ich den user übergeben, weil dann habe ich gleich stack und deck
+        dann sowas wie update( depot = 'je nachdem wo es war' und owner = userid where id = cardid)
+        
+        die methode heißt dann pushCards
+
+         */
+
         public List<Card> GetCards(Guid userId, bool obj = false)
         {
             var cards = new List<Card>();
@@ -207,7 +225,7 @@ namespace MCTG_Brian.Database
 
             return cards ?? null;
         }
-        public override void Add(Card card) { }
+        public override bool Add(Card card) { return false; }
         public override void Update(Card card)
         {
             using (var command = Connection.CreateCommand())
@@ -248,10 +266,31 @@ namespace MCTG_Brian.Database
     }
     public class PackRepository : Repository<List<Card>>
     {
-        public override void Add(List<Card> pack)
+        public override bool Add(List<Card> pack)
         {
             using (var command = Connection.CreateCommand())
             {
+                long rowAffected = 0;
+                foreach (Card cardId in pack)
+                {
+                    for(int i = 0; i < 5; i++)
+                    { 
+                        command.CommandText = $"SELECT COUNT(ID) FROM store where cast(card{i+1}->>'Id' as text) = cast(@cardId as text)";
+                        command.Parameters.AddWithValue("cardId", cardId.Id);
+                        rowAffected += (long)command.ExecuteScalar();
+                        command.Parameters.Clear();
+                    }
+                    command.CommandText = $"SELECT COUNT(ID) FROM cards where cast(id as text) = cast(@cardId as text)";
+                    command.Parameters.AddWithValue("cardId", cardId.Id);
+                    rowAffected += (long)command.ExecuteScalar();
+                    command.Parameters.Clear();
+                }
+
+                if(rowAffected > 0)
+                {
+                    return false;
+                }
+
                 command.CommandText = "INSERT INTO store (card1, card2, card3, card4, card5) VALUES (@Card1, @Card2, @Card3, @Card4, @Card5)";
 
                 for (int i = 0; i < 5; i++)
@@ -263,6 +302,8 @@ namespace MCTG_Brian.Database
 
                 command.Prepare();
                 command.ExecuteNonQuery();
+
+                return true;
             }
         }
         public override void Update(List<Card> packs)
@@ -337,7 +378,7 @@ namespace MCTG_Brian.Database
     }
     public class TradeRepository : Repository<Trade> 
     {
-        public override void Add(Trade elm)
+        public override bool Add(Trade elm)
         {
             using (var command = Connection.CreateCommand())
             {
@@ -351,6 +392,7 @@ namespace MCTG_Brian.Database
                 command.Prepare();
                 command.ExecuteNonQuery();
             }
+            return true;
         }
         public void Delete(Guid tradeId)
         {

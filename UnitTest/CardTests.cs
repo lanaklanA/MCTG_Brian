@@ -21,7 +21,7 @@ namespace UnitTest.Model
             var result = card.DetermineCardType(card.Name);
 
             // Assert
-            Assert.AreEqual(Card.CardType.Spell, result);
+            Assert.That(result, Is.EqualTo(Card.CardType.Spell));
         }
 
 
@@ -36,7 +36,7 @@ namespace UnitTest.Model
             var result = card.DetermineCardType(card.Name);
 
             //Assert
-            Assert.AreEqual(Card.CardType.Monster, result);
+            Assert.That(result, Is.EqualTo(Card.CardType.Monster));
         }
 
         [Test]
@@ -49,7 +49,7 @@ namespace UnitTest.Model
             var result = card.DetermineElementType(card.Name);
 
             //Assert
-            Assert.AreEqual(Card.ElementType.Normal, result);
+            Assert.That(result, Is.EqualTo(Card.ElementType.Normal));
         }
 
         [Test]
@@ -63,7 +63,7 @@ namespace UnitTest.Model
             var result = card.DetermineElementType(card.Name);
 
             // Assert
-            Assert.AreEqual(ElementType.Water, result);
+            Assert.That(result, Is.EqualTo(ElementType.Water));
         }
 
         [Test]
@@ -76,7 +76,7 @@ namespace UnitTest.Model
             var result = card.DetermineElementType(card.Name);
 
             // Assert
-            Assert.AreEqual(ElementType.Fire, result);
+            Assert.That(result, Is.EqualTo(ElementType.Fire));
         }
 
         [Test]
@@ -89,7 +89,7 @@ namespace UnitTest.Model
             var result = card.DetermineElementType(card.Name);
 
             // Assert
-            Assert.AreEqual(ElementType.Normal, result);
+            Assert.That(result, Is.EqualTo(ElementType.Normal));
         }
 
         [Test]
@@ -102,7 +102,7 @@ namespace UnitTest.Model
             var result = card.DetermineElementType(card.Name);
 
             // Assert
-            Assert.AreEqual(ElementType.Normal, result);
+            Assert.That(result, Is.EqualTo(ElementType.Normal));
         }
 
     }

@@ -4,7 +4,7 @@ namespace MCTG_Brian.Battle
 {
     public static class BattleLogic
     {
-        public static Card Calculate(Card card1, Card card2)
+        public static Card? Calculate(Card card1, Card card2)
         {
             if (card1.Type == Card.CardType.Monster && card2.Type == Card.CardType.Monster)
             {
