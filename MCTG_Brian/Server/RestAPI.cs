@@ -417,12 +417,7 @@ namespace MCTG_Brian.Server
                             return;
                         }
 
-                        if (Auth.getUser(request.getToken()).Coins < 5)
-                        {
-                            SendMessage(stream, 403, $"User {Auth.getUser(request.getToken()).Username} has not enough money ({Auth.getUser(request.getToken()).Coins}) for buying a card package");
-                            return;
-                        }
-                        
+                                              
                         Card strongerCard = (card1.Damage > card2.Damage) ? card1 : card2;
                         Card weakerCard = (card1.Damage < card2.Damage) ? card1 : card2;
                         strongerCard.Damage = (strongerCard.Damage * 1.5 + weakerCard.Damage * 1.5) / 2;
