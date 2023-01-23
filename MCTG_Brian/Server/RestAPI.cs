@@ -18,33 +18,6 @@ namespace MCTG_Brian.Server
 
         public static BattleLobby Lobby = new BattleLobby();
 
-        private static List<Tuple<string, string>> notAuthList = new List<Tuple<string, string>>()
-        {
-            new Tuple<string, string>("POST", "/users"),
-            new Tuple<string, string>("POST", "/sessions"),
-        };
-        private static List<Tuple<string, string>> AuthList = new List<Tuple<string, string>>()
-        {
-            new Tuple<string, string>("GET", "/cards"),
-            new Tuple<string, string>("GET", "/deck"),
-            new Tuple<string, string>("GET", "/deck?format=plain"),
-            new Tuple<string, string>("GET", "/stats"),
-            new Tuple<string, string>("GET", "/score"),
-            new Tuple<string, string>("GET", "/tradings"), 
-
-            new Tuple<string, string>("PUT", "/deck"),
-
-            new Tuple<string, string>("POST", "/packages"),
-            new Tuple<string, string>("POST", "/battles"),
-            new Tuple<string, string>("POST", "/tradings"),
-            new Tuple<string, string>("POST", "/fusion"),
-            new Tuple<string, string>("POST", "/transactions/packages"),
-        };
-        private static List<Tuple<string, string>> AdminList = new List<Tuple<string, string>>()
-        {
-            new Tuple<string, string>("POST", "/packages"),
-        };
-
         /// <summary>
         /// Handles the incoming client request, depending on path and body. After processing the response is send to the client
         /// </summary>
@@ -52,28 +25,22 @@ namespace MCTG_Brian.Server
         /// <param name="stream"></param>
         public static void HandleRequest(RequestContainer request, NetworkStream stream)
         {
-            AuthList.Add(new Tuple<string, string>("GET", $"/users/{request.Path.Replace("/users/", "")}"));
-            AuthList.Add(new Tuple<string, string>("PUT", $"/users/{request.Path.Replace("/users/", "")}"));
-            AuthList.Add(new Tuple<string, string>("POST", $"/tradings/{request.Path.Replace("/tradings/", "")}"));
-            AuthList.Add(new Tuple<string, string>("DELETE", $"/tradings/{request.Path.Replace("/tradings/", "")}"));
-            AuthList.Add(new Tuple<string, string>("POST", $"/tradings/{request.Path.Replace("/tradings/", "")}"));
-
             /// <summary>
             /// Check for existing path, Authentication and Authorization
             /// </summary>
-            if (notAuthList.Contains(new Tuple<string, string>(request.Method, request.Path))) { }
-            else if (AdminList.Contains(new Tuple<string, string>(request.Method, request.Path)) && (!Auth.isAdmin(request.getToken())))
+            if      (Auth.existsPathNotAuth(request)) { }
+            else if (Auth.existsPathAdmin(request) && !Auth.isAdmin(request.getToken()))
             {
                 SendMessage(stream, 403, "Provided user is not an admin");
                 return;
             }
-            else if (AuthList.Contains(new Tuple<string, string>(request.Method, request.Path)) && Auth.isUserLoggedIn(request.getToken())) { }
-            else if (AuthList.Contains(new Tuple<string, string>(request.Method, request.Path)) && (request.getToken() == null))
+            else if (Auth.existsPathAuth(request) && Auth.isUserLoggedIn(request.getToken())) { }
+            else if (Auth.existsPathAuth(request) && (request.getToken() == null))
             {
                 SendMessage(stream, 401, "Access token is missing or invalid");
                 return;
             }
-            else if (AuthList.Contains(new Tuple<string, string>(request.Method, request.Path)))
+            else if (Auth.existsPathAuth(request))
             {
                 SendMessage(stream, 401, "Authorization is needed for this action");
                 return;
@@ -83,6 +50,8 @@ namespace MCTG_Brian.Server
                 SendMessage(stream, 404, "Path not found");
                 return;
             }
+
+            
 
             /// <summary>
             /// Does the process depending on the path
@@ -95,7 +64,7 @@ namespace MCTG_Brian.Server
                     {
                         List<Card> tempDeck = Auth.getUser(request.getToken()).Deck;
 
-                        if (tempDeck.Count() <= 0)
+                        if (!tempDeck.Any())
                         {
                             SendMessage(stream, 202, $"The requst was fine, but the deck of user ({Auth.getUser(request.getToken()).Username}) is empty");
                             return;
@@ -144,7 +113,7 @@ namespace MCTG_Brian.Server
                     {
                         List<Card> tempStack = Auth.getUser(request.getToken()).Stack;
 
-                        if(tempStack.Count() <= 0)
+                        if(!tempStack.Any())
                         {
                             SendMessage(stream, 202, $"The request was fine, but the user ({Auth.getUser(request.getToken()).Username}) doesn't have any cards");
                             return;
